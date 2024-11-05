@@ -17,6 +17,7 @@ import (
 	"github.com/odigos-io/odigos/frontend/kube"
 	"github.com/odigos-io/odigos/frontend/services"
 	actionservices "github.com/odigos-io/odigos/frontend/services/actions"
+	sseservices "github.com/odigos-io/odigos/frontend/services/sse"
 	testconnection "github.com/odigos-io/odigos/frontend/services/test_connection"
 	"github.com/odigos-io/odigos/k8sutils/pkg/workload"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -684,6 +685,13 @@ func (r *mutationResolver) DeleteInstrumentationRule(ctx context.Context, ruleID
 
 // ComputePlatform is the resolver for the computePlatform field.
 func (r *queryResolver) ComputePlatform(ctx context.Context) (*model.ComputePlatform, error) {
+	sseservices.SendMessageToClient(sseservices.SSEMessage{
+		Data:   "ComputePlatform",
+		Type:   sseservices.MessageTypeSuccess,
+		Event:  sseservices.MessageEventAdded,
+		Target: "ComputePlatform",
+	})
+
 	return &model.ComputePlatform{
 		ComputePlatformType: model.ComputePlatformTypeK8s,
 	}, nil
@@ -795,6 +803,33 @@ func (r *queryResolver) GetOverviewMetrics(ctx context.Context) (*model.Overview
 	}, nil
 }
 
+// MessageStream is the resolver for the messageStream field.
+func (r *subscriptionResolver) MessageStream(ctx context.Context) (<-chan *model.SSEMessage, error) {
+	messageChan := sseservices.RegisterClient()
+
+	go func() {
+		<-ctx.Done()
+		sseservices.UnregisterClient(messageChan)
+	}()
+
+	gqlMessageChan := make(chan *model.SSEMessage)
+	go func() {
+		for {
+			select {
+			case message := <-messageChan:
+				gqlMessageChan <- &model.SSEMessage{
+					Data: message.Data,
+				}
+			case <-ctx.Done():
+				close(gqlMessageChan)
+				return
+			}
+		}
+	}()
+
+	return gqlMessageChan, nil
+}
+
 // ComputePlatform returns ComputePlatformResolver implementation.
 func (r *Resolver) ComputePlatform() ComputePlatformResolver { return &computePlatformResolver{r} }
 
@@ -812,8 +847,12 @@ func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+// Subscription returns SubscriptionResolver implementation.
+func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionResolver{r} }
+
 type computePlatformResolver struct{ *Resolver }
 type destinationResolver struct{ *Resolver }
 type k8sActualNamespaceResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type subscriptionResolver struct{ *Resolver }

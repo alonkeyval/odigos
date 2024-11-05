@@ -444,6 +444,14 @@ type SingleDestinationMetricsResponse {
   throughput: Int!
 }
 
+type SSEMessage {
+  type: String!
+  data: String!
+  event: String!
+  target: String!
+  crdType: String!
+}
+
 type Query {
   computePlatform: ComputePlatform
   config: GetConfigResponse
@@ -481,4 +489,8 @@ type Mutation {
     instrumentationRule: InstrumentationRuleInput!
   ): InstrumentationRule!
   deleteInstrumentationRule(ruleId: ID!): Boolean!
+}
+
+type Subscription {
+  messageStream: SSEMessage!
 }

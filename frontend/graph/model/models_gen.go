@@ -460,6 +460,14 @@ func (this RenameAttributeAction) GetSignals() []SignalType {
 	return interfaceSlice
 }
 
+type SSEMessage struct {
+	Type    string `json:"type"`
+	Data    string `json:"data"`
+	Event   string `json:"event"`
+	Target  string `json:"target"`
+	CrdType string `json:"crdType"`
+}
+
 type SingleDestinationMetricsResponse struct {
 	ID            string `json:"id"`
 	TotalDataSent int    `json:"totalDataSent"`
@@ -477,6 +485,9 @@ type SingleSourceMetricsResponse struct {
 type SourceContainerRuntimeDetails struct {
 	ContainerName string `json:"containerName"`
 	Language      string `json:"language"`
+}
+
+type Subscription struct {
 }
 
 type TestConnectionResponse struct {
