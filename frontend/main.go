@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/go-logr/logr"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/odigos-io/odigos/frontend/kube/watchers"
 	"github.com/odigos-io/odigos/frontend/version"
 
+	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/gin-gonic/gin"
 	"github.com/odigos-io/odigos/frontend/endpoints"
 
@@ -200,6 +202,10 @@ func startHTTPServer(flags *Flags, odigosMetrics *collectormetrics.OdigosMetrics
 		gqlHandler.ServeHTTP(c.Writer, c.Request)
 	})
 	r.GET("/playground", gin.WrapH(playground.Handler("GraphQL Playground", "/graphql")))
+
+	gqlHandler.AddTransport(transport.Websocket{
+		KeepAlivePingInterval: 10 * time.Second,
+	})
 
 	return r, nil
 }

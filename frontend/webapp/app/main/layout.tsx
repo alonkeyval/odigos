@@ -2,6 +2,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { MainHeader } from '@/components';
+import { useOverviewMetrics } from '@/hooks';
 
 const LayoutContainer = styled.div`
   width: 100%;
@@ -25,6 +26,8 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { start } = useOverviewMetrics();
+  start();
   return (
     <LayoutContainer>
       <MainContent>
