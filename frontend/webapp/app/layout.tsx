@@ -18,7 +18,11 @@ const LAYOUT_STYLE: React.CSSProperties = {
   height: '100vh',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -31,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   useSSE();
 
   return (
-    <html lang='en'>
+    <html lang="en">
       <ReduxProvider>
         <ApolloWrapper>
           <QueryClientProvider client={queryClient}>
