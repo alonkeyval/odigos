@@ -317,6 +317,12 @@ func (this LatencySamplerAction) GetSignals() []SignalType {
 	return interfaceSlice
 }
 
+type Message struct {
+	ID      string `json:"id"`
+	Content string `json:"content"`
+	User    string `json:"user"`
+}
+
 type MessagingPayloadCollection struct {
 	MaxPayloadLength    *int  `json:"maxPayloadLength,omitempty"`
 	DropPartialPayloads *bool `json:"dropPartialPayloads,omitempty"`

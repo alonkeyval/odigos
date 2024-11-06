@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/gorilla/websocket"
 
 	"github.com/odigos-io/odigos/common"
 	"github.com/odigos-io/odigos/common/consts"
@@ -31,13 +32,13 @@ import (
 	"github.com/odigos-io/odigos/frontend/kube/watchers"
 	"github.com/odigos-io/odigos/frontend/version"
 
-	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/gin-gonic/gin"
 	"github.com/odigos-io/odigos/frontend/endpoints"
 
 	_ "net/http/pprof"
 
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/odigos-io/odigos/frontend/graph"
 )
@@ -198,14 +199,21 @@ func startHTTPServer(flags *Flags, odigosMetrics *collectormetrics.OdigosMetrics
 		},
 	}))
 
+	// Enable WebSocket transport for subscriptions
+	gqlHandler.AddTransport(transport.Websocket{
+		KeepAlivePingInterval: 10 * time.Second,
+		Upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true // Enable CORS for all origins (use with caution in production)
+			},
+		},
+	})
 	r.POST("/graphql", func(c *gin.Context) {
 		gqlHandler.ServeHTTP(c.Writer, c.Request)
 	})
 	r.GET("/playground", gin.WrapH(playground.Handler("GraphQL Playground", "/graphql")))
-
-	gqlHandler.AddTransport(transport.Websocket{
-		KeepAlivePingInterval: 10 * time.Second,
-	})
+	http.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
+	http.Handle("/graphql", gqlHandler)
 
 	return r, nil
 }

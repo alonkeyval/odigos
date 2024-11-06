@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/odigos-io/odigos/api/odigos/v1alpha1"
 	"github.com/odigos-io/odigos/common"
 	"github.com/odigos-io/odigos/common/consts"
@@ -282,7 +283,6 @@ func (r *destinationResolver) Type(ctx context.Context, obj *model.Destination) 
 
 // Conditions is the resolver for the conditions field.
 func (r *destinationResolver) Conditions(ctx context.Context, obj *model.Destination) ([]*model.Condition, error) {
-
 	conditions := make([]*model.Condition, 0, len(obj.Conditions))
 	for _, c := range obj.Conditions {
 		// Convert LastTransitionTime to a string pointer if it's not nil
@@ -705,12 +705,7 @@ func (r *mutationResolver) DeleteInstrumentationRule(ctx context.Context, ruleID
 
 // ComputePlatform is the resolver for the computePlatform field.
 func (r *queryResolver) ComputePlatform(ctx context.Context) (*model.ComputePlatform, error) {
-	sseservices.SendMessageToClient(sseservices.SSEMessage{
-		Data:   "ComputePlatform",
-		Type:   sseservices.MessageTypeSuccess,
-		Event:  sseservices.MessageEventAdded,
-		Target: "ComputePlatform",
-	})
+	AddMessage("Hello from the backend!", "Odigos")
 
 	return &model.ComputePlatform{
 		ComputePlatformType: model.ComputePlatformTypeK8s,
@@ -850,6 +845,21 @@ func (r *subscriptionResolver) MessageStream(ctx context.Context) (<-chan *model
 	return gqlMessageChan, nil
 }
 
+// MessageAdded is the resolver for the messageAdded field.
+func (r *subscriptionResolver) MessageAdded(ctx context.Context) (<-chan *model.Message, error) {
+	messageCh := make(chan *model.Message, 1)
+	messageChannels = append(messageChannels, messageCh)
+
+	go func() {
+		<-ctx.Done()
+		// Remove the closed channel
+		messageChannels = removeChannel(messageChannels, messageCh)
+		close(messageCh)
+	}()
+
+	return messageCh, nil
+}
+
 // ComputePlatform returns ComputePlatformResolver implementation.
 func (r *Resolver) ComputePlatform() ComputePlatformResolver { return &computePlatformResolver{r} }
 
@@ -876,3 +886,29 @@ type k8sActualNamespaceResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+var messageChannels []chan *model.Message
+
+func PublishMessage(message *model.Message) {
+	for _, ch := range messageChannels {
+		ch <- message
+	}
+}
+func removeChannel(channels []chan *model.Message, ch chan *model.Message) []chan *model.Message {
+	for i, c := range channels {
+		if c == ch {
+			return append(channels[:i], channels[i+1:]...)
+		}
+	}
+	return channels
+}
+func AddMessage(content, user string) {
+	message := &model.Message{ID: uuid.New().String(), Content: content, User: user}
+	PublishMessage(message)
+}

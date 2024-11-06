@@ -491,6 +491,13 @@ type Mutation {
   deleteInstrumentationRule(ruleId: ID!): Boolean!
 }
 
+type Message {
+  id: ID!
+  content: String!
+  user: String!
+}
+
 type Subscription {
   messageStream: SSEMessage!
+  messageAdded: Message!
 }
