@@ -504,6 +504,14 @@ type TestConnectionResponse struct {
 	Reason          *string `json:"reason,omitempty"`
 }
 
+type TradeData struct {
+	Symbol    string `json:"symbol"`
+	LastPrice int    `json:"last_price"`
+	Volume    int    `json:"volume"`
+	High      int    `json:"high"`
+	Low       int    `json:"low"`
+}
+
 type ComputePlatformType string
 
 const (

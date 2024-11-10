@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -818,6 +819,11 @@ func (r *queryResolver) GetOverviewMetrics(ctx context.Context) (*model.Overview
 	}, nil
 }
 
+// Trade is the resolver for the trade field.
+func (r *queryResolver) Trade(ctx context.Context) ([]*model.TradeData, error) {
+	panic(fmt.Errorf("not implemented: Trade - trade"))
+}
+
 // MessageStream is the resolver for the messageStream field.
 func (r *subscriptionResolver) MessageStream(ctx context.Context) (<-chan *model.SSEMessage, error) {
 	messageChan := sseservices.RegisterClient()
@@ -845,19 +851,27 @@ func (r *subscriptionResolver) MessageStream(ctx context.Context) (<-chan *model
 	return gqlMessageChan, nil
 }
 
-// MessageAdded is the resolver for the messageAdded field.
-func (r *subscriptionResolver) MessageAdded(ctx context.Context) (<-chan *model.Message, error) {
-	messageCh := make(chan *model.Message, 1)
-	messageChannels = append(messageChannels, messageCh)
+// LiveTrade is the resolver for the liveTrade field.
+func (r *subscriptionResolver) LiveTrade(ctx context.Context, symbol string) (<-chan *model.TradeData, error) {
+	var tradeChannel = make(chan *model.TradeData, 1)
 
+	// context done check
 	go func() {
 		<-ctx.Done()
-		// Remove the closed channel
-		messageChannels = removeChannel(messageChannels, messageCh)
-		close(messageCh)
 	}()
 
-	return messageCh, nil
+	// run a concurrent routine to send the data to subscribed client
+	go func(tradeChannel chan *model.TradeData) {
+		ticker := time.NewTicker(1 * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				tradeChannel <- r.GenerateTradeData()
+			}
+		}
+	}(tradeChannel)
+
+	return tradeChannel, nil
 }
 
 // ComputePlatform returns ComputePlatformResolver implementation.
@@ -893,12 +907,32 @@ type subscriptionResolver struct{ *Resolver }
 //   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
 //     it when you're done.
 //   - You have helper methods in this file. Move them out to keep these resolver files clean.
-var messageChannels []chan *model.Message
+func (r *subscriptionResolver) MessageAdded(ctx context.Context) (<-chan *model.Message, error) {
+	messageCh := make(chan *model.Message)
+
+	go func() {
+		defer close(messageCh) // Ensure the channel is closed when done
+		for {
+			select {
+			case <-ctx.Done():
+				return // Exit the goroutine if the subscription is closed
+			case msg := <-broadcastChannel: // Replace `someBroadcastChannel` with your actual source
+				messageCh <- msg
+			}
+		}
+	}()
+
+	return messageCh, nil
+}
+
+var (
+	messageChannels []chan *model.Message
+	mu              sync.Mutex // Mutex to synchronize access to messageChannels
+)
+var broadcastChannel = make(chan *model.Message)
 
 func PublishMessage(message *model.Message) {
-	for _, ch := range messageChannels {
-		ch <- message
-	}
+	broadcastChannel <- message
 }
 func removeChannel(channels []chan *model.Message, ch chan *model.Message) []chan *model.Message {
 	for i, c := range channels {

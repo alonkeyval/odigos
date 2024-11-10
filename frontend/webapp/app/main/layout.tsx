@@ -26,8 +26,8 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { start } = useOverviewMetrics();
-  start();
+  // const { start } = useOverviewMetrics();
+  // start();
   return (
     <LayoutContainer>
       <MainContent>

@@ -459,6 +459,7 @@ type Query {
   destinationTypeDetails(type: String!): GetDestinationDetailsResponse
   potentialDestinations: [DestinationDetails!]!
   getOverviewMetrics: OverviewMetricsResponse!
+  trade: [TradeData]!
 }
 
 type Mutation {
@@ -497,7 +498,15 @@ type Message {
   user: String!
 }
 
+type TradeData {
+  symbol: String!
+  last_price: Int!
+  volume: Int!
+  high: Int!
+  low: Int!
+}
+
 type Subscription {
   messageStream: SSEMessage!
-  messageAdded: Message!
+  liveTrade(symbol: String!): TradeData!
 }

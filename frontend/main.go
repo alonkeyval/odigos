@@ -28,6 +28,7 @@ import (
 	"github.com/odigos-io/odigos/frontend/endpoints/actions"
 	collectormetrics "github.com/odigos-io/odigos/frontend/endpoints/collector_metrics"
 	"github.com/odigos-io/odigos/frontend/endpoints/sse"
+	"github.com/odigos-io/odigos/frontend/graph/model"
 	"github.com/odigos-io/odigos/frontend/kube"
 	"github.com/odigos-io/odigos/frontend/kube/watchers"
 	"github.com/odigos-io/odigos/frontend/version"
@@ -38,6 +39,7 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/odigos-io/odigos/frontend/graph"
@@ -192,28 +194,42 @@ func startHTTPServer(flags *Flags, odigosMetrics *collectormetrics.OdigosMetrics
 		apis.DELETE("/actions/types/PiiMasking/:id", func(c *gin.Context) { actions.DeletePiiMasking(c, flags.Namespace, c.Param("id")) })
 	}
 
+	// c := corsHandler.New(corsHandler.Options{
+	// 	AllowedOrigins:   []string{"*"},
+	// 	AllowCredentials: true,
+	// })
+
 	// GraphQL handlers
-	gqlHandler := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{
+	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{
 			MetricsConsumer: odigosMetrics,
+			Trades:          []*model.TradeData{},
 		},
 	}))
 
-	// Enable WebSocket transport for subscriptions
-	gqlHandler.AddTransport(transport.Websocket{
+	srv.AddTransport(transport.SSE{})
+	srv.AddTransport(transport.POST{})
+	srv.AddTransport(transport.Websocket{
 		KeepAlivePingInterval: 10 * time.Second,
 		Upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
-				return true // Enable CORS for all origins (use with caution in production)
+				log.Println("WebSocket connection attempt from origin:", r.Header.Get("Origin"))
+				return true
 			},
 		},
 	})
-	r.POST("/graphql", func(c *gin.Context) {
-		gqlHandler.ServeHTTP(c.Writer, c.Request)
-	})
-	r.GET("/playground", gin.WrapH(playground.Handler("GraphQL Playground", "/graphql")))
-	http.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
-	http.Handle("/graphql", gqlHandler)
+	srv.Use(extension.Introspection{})
+
+	http.Handle("/", playground.Handler("Todo", "/query"))
+	// http.Handle("/query", c.Handler(srv))
+	http.Handle("/query", srv) // For HTTP POST requests
+	// r.GET("/query", func(c *gin.Context) { // For WebSocket connections
+	// 	srv.ServeHTTP(c.Writer, c.Request)
+	// })
+	// r.POST("/graphql", func(c *gin.Context) {
+	// 	srv.ServeHTTP(c.Writer, c.Request)
+	// })
+	// r.GET("/graphql", gin.WrapH(playground.Handler("GraphQL Playground", "/query")))
 
 	return r, nil
 }

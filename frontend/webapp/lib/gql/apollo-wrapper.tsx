@@ -13,14 +13,15 @@ import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 
 function makeClient() {
   const httpLink = new HttpLink({
-    uri: 'http://localhost:8085/graphql',
+    uri: 'http://localhost:8085/query',
   });
 
   const wsLink =
     typeof window !== 'undefined'
       ? new GraphQLWsLink(
           createClient({
-            url: 'ws://localhost:8085/graphql',
+            url: 'ws://localhost:8085/query',
+            retryAttempts: 10,
             connectionParams: {
               reconnectAttempts: 10, // Custom parameter for example purposes
             },

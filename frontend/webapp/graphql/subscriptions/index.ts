@@ -11,3 +11,15 @@ export const MESSAGE_STREAM_SUBSCRIPTION = gql`
     }
   }
 `;
+
+export const GetLiveTradeGQL = gql`
+  subscription live_trade {
+    liveTrade(symbol: "DELTA") {
+      symbol
+      last_price
+      volume
+      high
+      low
+    }
+  }
+`;

@@ -8,6 +8,9 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.0
+	github.com/graphql-go/graphql v0.8.1
+	github.com/graphql-go/handler v0.2.4
 	github.com/odigos-io/odigos/api v0.0.0
 	github.com/odigos-io/odigos/common v1.0.63
 	github.com/odigos-io/odigos/destinations v0.0.0-20240223090638-df3328a088bc
@@ -51,7 +54,7 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rs/cors v1.11.0 // indirect
+	github.com/rs/cors v1.11.1 // indirect
 	go.opentelemetry.io/collector v0.106.1 // indirect
 	go.opentelemetry.io/collector/config/configauth v0.106.1 // indirect
 	go.opentelemetry.io/collector/config/configcompression v1.12.0 // indirect
@@ -104,7 +107,6 @@ require (
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
