@@ -2,65 +2,38 @@
 import { useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useRouter } from 'next/navigation';
+import { addNotification, store } from '@/store';
 import { ROUTES, CONFIG, QUERIES } from '@/utils';
 import { Loader } from '@keyval-dev/design-system';
 import { getDestinations, getConfig } from '@/services';
-import { addNotification, store } from '@/store';
+
 export default function App() {
   const router = useRouter();
-  const { data, isLoading: isConfigLoading } = useQuery(
-    [QUERIES.API_CONFIG],
-    getConfig
-  );
-  const {
-    isLoading: isDestinationLoading,
-    data: destinationList,
-    error,
-  } = useQuery([QUERIES.API_DESTINATIONS], getDestinations);
+  const config = useQuery([QUERIES.API_CONFIG], getConfig);
+  const destinations = useQuery([QUERIES.API_DESTINATIONS], getDestinations);
 
   useEffect(() => {
-    router.push(ROUTES.OVERVIEW);
-  }, [data, destinationList]);
-  useEffect(() => {
-    console.log({ data, destinationList, isConfigLoading });
-    if (isConfigLoading || isDestinationLoading) return;
-
-    renderCurrentPage();
-  }, [data, destinationList, isConfigLoading]);
-
-  useEffect(() => {
-    console.log({ error });
-    if (!error) return;
-    store.dispatch(
-      addNotification({
-        id: '1',
-        message: 'An error occurred',
-        title: 'Error',
-        type: 'error',
-        target: 'notification',
-        crdType: 'notification',
-      })
-    );
-    router.push(ROUTES.OVERVIEW);
-  }, [error]);
-
-  function renderCurrentPage() {
-    const { installation } = data;
-
-    if (destinationList.length > 0) {
-      router.push(ROUTES.OVERVIEW);
+    if (config['isLoading'] || destinations['isLoading']) {
       return;
     }
 
-    switch (installation) {
-      case CONFIG.NEW:
-      case CONFIG.APPS_SELECTED:
-        router.push(ROUTES.CHOOSE_SOURCES);
-        break;
-      case CONFIG.FINISHED:
-        router.push(ROUTES.OVERVIEW);
+    if (!!config['error'] || !!destinations['error']) {
+      const title = (!!config['error'] ? 'Config' : 'Destinations') + ' Error';
+      // @ts-ignore (?.message is not recognized but does exist)
+      const message = config['error']?.message || destinations['error']?.message || 'An error occurred';
+
+      store.dispatch(addNotification({ id: '1', type: 'error', title, message, target: '', crdType: '' }));
+      router.push(ROUTES.OVERVIEW);
+
+      return;
     }
-  }
+
+    if (config['data'].installation === CONFIG.FINISHED || destinations['data'].length > 0) {
+      router.push(ROUTES.OVERVIEW);
+    } else {
+      router.push(ROUTES.CHOOSE_SOURCES);
+    }
+  }, [config['isLoading'], config['error'], config['data'], destinations['isLoading'], destinations['error'], destinations['data']]);
 
   return <Loader />;
 }
