@@ -88,9 +88,9 @@ const DetectedContainers: React.FC<DetectedContainersProps> = ({
                   style={{ marginTop: 6 }}
                 >
                   {hasDeviceNotAddedCondition
-                    ? `We cannot run alongside the ${lang.other_agent.name} agent due to configuration restrictions. `
+                    ? `By default, we do not operate alongside the ${lang.other_agent.name} Agent. Please contact the Odigos team for guidance on enabling this configuration.`
                     : canRunInParallel
-                    ? `We are running concurrently with the ${lang.other_agent.name}. Ensure this is configured optimally in Kubernetes.`
+                    ? `We are operating alongside the ${lang.other_agent.name} Agent, which is not the recommended configuration. We suggest disabling the ${lang.other_agent.name} Agent for optimal performance.`
                     : `Concurrent execution with the ${lang.other_agent.name} is not supported. Please disable one of the agents to enable proper instrumentation.`}
                 </KeyvalText>
               )}
