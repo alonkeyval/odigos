@@ -30,7 +30,24 @@ type DestinationSpec struct {
 	Data            map[string]string            `json:"data"`
 	SecretRef       *v1.LocalObjectReference     `json:"secretRef,omitempty"`
 	Signals         []common.ObservabilitySignal `json:"signals"`
+	SourceFilter    *SourceFilter                `json:"sourceFilter,omitempty"`
 }
+
+// SourceFilter defines the rules for selecting sources for a destination
+type SourceFilter struct {
+	Mode       SourceFilterMode `json:"mode,omitempty"`       // Filtering mode: all, namespace, or groups
+	Namespaces []string         `json:"namespaces,omitempty"` // List of namespaces (used if mode = "namespace")
+	Groups     []string         `json:"groups,omitempty"`     // List of groups (used if mode = "groups")
+}
+
+// +kubebuilder:validation:Enum=all;namespace;groups
+type SourceFilterMode string
+
+const (
+	SourceFilterModeAll       SourceFilterMode = "all"       // Send data from all sources (default)
+	SourceFilterModeNamespace SourceFilterMode = "namespace" // Send data from specific namespaces
+	SourceFilterModeGroups    SourceFilterMode = "groups"    // Send data from specific groups
+)
 
 // DestinationStatus defines the observed state of Destination
 type DestinationStatus struct {

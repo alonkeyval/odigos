@@ -72,6 +72,25 @@ spec:
                   - METRICS
                   type: string
                 type: array
+              sourceFilter:
+                description: SourceFilter defines the rules for selecting sources
+                  for a destination
+                properties:
+                  groups:
+                    items:
+                      type: string
+                    type: array
+                  mode:
+                    enum:
+                    - all
+                    - namespace
+                    - groups
+                    type: string
+                  namespaces:
+                    items:
+                      type: string
+                    type: array
+                type: object
               type:
                 type: string
             required:
