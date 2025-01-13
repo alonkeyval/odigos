@@ -1,0 +1,11 @@
+apiVersion: odigos.io/v1alpha1
+kind: Source
+metadata:
+  name: 07-excluded-source
+  namespace: default
+spec:
+  instrumentationDisabled: true
+  workload:
+    name: 07-excluded-source
+    namespace: default
+    kind: Deployment
