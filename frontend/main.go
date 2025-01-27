@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	_ "net/http/pprof"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
+	"github.com/joho/godotenv"
 	"github.com/odigos-io/odigos/common"
 	"github.com/odigos-io/odigos/destinations"
 	"github.com/odigos-io/odigos/frontend/graph"
@@ -29,6 +31,7 @@ import (
 	"github.com/odigos-io/odigos/frontend/services"
 	collectormetrics "github.com/odigos-io/odigos/frontend/services/collector_metrics"
 	"github.com/odigos-io/odigos/frontend/services/sse"
+	websocketclient "github.com/odigos-io/odigos/frontend/services/websocket"
 	"github.com/odigos-io/odigos/frontend/version"
 	"github.com/odigos-io/odigos/k8sutils/pkg/env"
 )
@@ -154,7 +157,56 @@ func startWatchers(ctx context.Context, flags *Flags) error {
 	return nil
 }
 
+func startWSServer() {
+	// Load environment variables from .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("[WARN] No .env file found, using system environment variables")
+	}
+
+	// Read environment variables
+	serverAddr := os.Getenv("CENTRAL_BACKEND_WS_URL")
+	clusterID := os.Getenv("CLUSTER_NAME")
+	apiKey := os.Getenv("API_KEY")
+
+	// Validate required variables
+	if serverAddr == "" || clusterID == "" || apiKey == "" {
+		log.Fatal("[ERROR] Missing required environment variables (CENTRAL_BACKEND_WS_URL, CLUSTER_NAME, API_KEY)")
+	}
+
+	client, err := websocketclient.NewWebSocketClient(serverAddr, clusterID)
+	if err != nil {
+		log.Fatalf("[ERROR] Failed to connect to WebSocket server: %v", err)
+	}
+
+	// Start listening for messages
+	go client.ReceiveMessages()
+
+	// Send messages every 30 seconds
+	for {
+		data := map[string]interface{}{
+			"cluster":    clusterID,
+			"namespaces": []string{"default", "kube-system"},
+		}
+
+		err := client.SendMessage(data)
+		if err != nil {
+			log.Printf("[ERROR] Failed to send data: %v\n", err)
+		} else {
+			log.Printf("[INFO] Sent cluster data: %v\n", data)
+		}
+
+		time.Sleep(30 * time.Second)
+	}
+}
+
 func main() {
+
+	// Load environment variables from .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("[WARN] No .env file found, using system environment variables")
+	}
+	startWSServer()
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	flags := parseFlags()
 
@@ -174,7 +226,7 @@ func main() {
 	go common.StartPprofServer(ctx, logr.FromSlogHandler(slog.Default().Handler()))
 
 	// Load destinations data
-	err := destinations.Load()
+	err = destinations.Load()
 	if err != nil {
 		log.Fatalf("Error loading destinations data: %s", err)
 	}
