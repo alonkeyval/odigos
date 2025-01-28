@@ -173,7 +173,7 @@ func startWSServer() {
 		log.Fatal("[ERROR] Missing required environment variables (CENTRAL_BACKEND_WS_URL, CLUSTER_NAME, API_KEY)")
 	}
 
-	client, err := websocketclient.NewWebSocketClient(serverAddr, clusterID)
+	client, err := websocketclient.NewWebSocketClient(serverAddr, clusterID, apiKey)
 	if err != nil {
 		log.Fatalf("[ERROR] Failed to connect to WebSocket server: %v", err)
 	}

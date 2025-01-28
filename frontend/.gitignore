@@ -4,3 +4,4 @@ odigos-backend
 __debug_bin*
 vendor
 .tools
+.env

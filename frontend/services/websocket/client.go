@@ -2,6 +2,7 @@ package websocketclient
 
 import (
 	"log"
+	"net/http"
 	"net/url"
 
 	"github.com/gorilla/websocket"
@@ -14,21 +15,24 @@ type WebSocketClient struct {
 }
 
 // NewWebSocketClient connects to the centralized backend WebSocket
-func NewWebSocketClient(serverAddr, clusterID string) (*WebSocketClient, error) {
+func NewWebSocketClient(serverAddr, clusterID, apiKey string) (*WebSocketClient, error) {
 	u := url.URL{Scheme: "ws", Host: serverAddr, Path: "/ws", RawQuery: "cluster_id=" + clusterID}
 
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	headers := http.Header{}
+	headers.Set("Authorization", apiKey)
+
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
 	if err != nil {
 		return nil, err
 	}
 
 	log.Printf("[INFO] Connected to WebSocket server at %s\n", u.String())
-	return &WebSocketClient{conn: conn}, nil
+	return &WebSocketClient{conn: conn, apiKey: apiKey}, nil
 }
 
 // SendMessage sends a message to the WebSocket server with API Key
 func (w *WebSocketClient) SendMessage(data map[string]interface{}) error {
-	data["api_key"] = w.apiKey // Include API key in each message
+	data["api_key"] = w.apiKey
 	return w.conn.WriteJSON(data)
 }
 
