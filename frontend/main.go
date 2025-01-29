@@ -13,7 +13,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	_ "net/http/pprof"
 
@@ -119,6 +118,24 @@ func startHTTPServer(flags *Flags, odigosMetrics *collectormetrics.OdigosMetrics
 	r.GET("/describe/odigos", services.DescribeOdigos)
 	r.GET("/describe/source/namespace/:namespace/kind/:kind/name/:name", services.DescribeSource)
 
+	// API route to start WebSocket connection
+	r.POST("/api/ws/start", func(c *gin.Context) {
+		var req struct {
+			CentralBackendURL string `json:"central_backend_url"`
+			ClusterName       string `json:"cluster_name"`
+		}
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+			return
+		}
+
+		// Start WebSocket connection with user-specified config
+		go websocketclient.StartWebSocketServer(req.CentralBackendURL, req.ClusterName)
+
+		c.JSON(http.StatusOK, gin.H{"status": "WebSocket connection started"})
+	})
+
 	return r, nil
 }
 
@@ -157,48 +174,6 @@ func startWatchers(ctx context.Context, flags *Flags) error {
 	return nil
 }
 
-func startWSServer() {
-	// Load environment variables from .env file
-	if err := godotenv.Load(); err != nil {
-		log.Println("[WARN] No .env file found, using system environment variables")
-	}
-
-	// Read environment variables
-	serverAddr := os.Getenv("CENTRAL_BACKEND_WS_URL")
-	clusterID := os.Getenv("CLUSTER_NAME")
-	apiKey := os.Getenv("API_KEY")
-
-	// Validate required variables
-	if serverAddr == "" || clusterID == "" || apiKey == "" {
-		log.Fatal("[ERROR] Missing required environment variables (CENTRAL_BACKEND_WS_URL, CLUSTER_NAME, API_KEY)")
-	}
-
-	client, err := websocketclient.NewWebSocketClient(serverAddr, clusterID, apiKey)
-	if err != nil {
-		log.Fatalf("[ERROR] Failed to connect to WebSocket server: %v", err)
-	}
-
-	// Start listening for messages
-	go client.ReceiveMessages()
-
-	// Send messages every 30 seconds
-	for {
-		data := map[string]interface{}{
-			"cluster":    clusterID,
-			"namespaces": []string{"default", "kube-system"},
-		}
-
-		err := client.SendMessage(data)
-		if err != nil {
-			log.Printf("[ERROR] Failed to send data: %v\n", err)
-		} else {
-			log.Printf("[INFO] Sent cluster data: %v\n", data)
-		}
-
-		time.Sleep(30 * time.Second)
-	}
-}
-
 func main() {
 
 	// Load environment variables from .env file
@@ -206,7 +181,7 @@ func main() {
 	if err != nil {
 		log.Println("[WARN] No .env file found, using system environment variables")
 	}
-	startWSServer()
+
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	flags := parseFlags()
 
