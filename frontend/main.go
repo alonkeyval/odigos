@@ -27,9 +27,10 @@ import (
 	"github.com/odigos-io/odigos/frontend/kube"
 	"github.com/odigos-io/odigos/frontend/kube/watchers"
 	"github.com/odigos-io/odigos/frontend/services"
+	centralbackend "github.com/odigos-io/odigos/frontend/services/central"
 	collectormetrics "github.com/odigos-io/odigos/frontend/services/collector_metrics"
 	"github.com/odigos-io/odigos/frontend/services/sse"
-	websocketclient "github.com/odigos-io/odigos/frontend/services/websocket"
+	"github.com/odigos-io/odigos/frontend/services/websocket"
 	"github.com/odigos-io/odigos/frontend/version"
 	"github.com/odigos-io/odigos/k8sutils/pkg/env"
 )
@@ -192,12 +193,14 @@ func main() {
 		log.Fatalf("Error creating Kubernetes client: %s", err)
 	}
 
-	//connect to central backend
-	wsClient, err := websocketclient.NewWebSocketClient(ctx)
-	if err == nil && wsClient != nil {
-		go wsClient.Listen()
+	// Start WebSocket client
+	webSocketClient, err := websocket.NewWebSocketClient(ctx)
+	if err != nil {
+		log.Println("[ERROR] Skipping WebSocket connection")
+	} else {
+		// Run WebSocket sender in a separate goroutine
+		go centralbackend.SendComputePlatformData(ctx, webSocketClient)
 	}
-
 	odigosMetrics := collectormetrics.NewOdigosMetrics()
 	var wg sync.WaitGroup
 	wg.Add(1)

@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"net/url"
@@ -60,6 +61,29 @@ func NewWebSocketClient(ctx context.Context) (*WebSocketClient, error) {
 	log.Printf("[INFO] Connected to WebSocket server at %s", u.String())
 
 	return &WebSocketClient{conn: conn, url: wsURL}, nil
+}
+
+// Send sends a message to the WebSocket server
+func (w *WebSocketClient) Send(message interface{}) error {
+	if w.conn == nil {
+		log.Println("[ERROR] WebSocket connection is nil. Skipping send.")
+		return nil
+	}
+
+	data, err := json.Marshal(message)
+	if err != nil {
+		log.Printf("[ERROR] Failed to serialize WebSocket message: %v", err)
+		return err
+	}
+
+	err = w.conn.WriteMessage(websocket.TextMessage, data)
+	if err != nil {
+		log.Printf("[ERROR] Failed to send WebSocket message: %v", err)
+		return err
+	}
+
+	log.Println("[INFO] Sent WebSocket message")
+	return nil
 }
 
 // Listen handles incoming WebSocket messages
