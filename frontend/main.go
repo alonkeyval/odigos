@@ -29,6 +29,7 @@ import (
 	"github.com/odigos-io/odigos/frontend/services"
 	collectormetrics "github.com/odigos-io/odigos/frontend/services/collector_metrics"
 	"github.com/odigos-io/odigos/frontend/services/sse"
+	websocketclient "github.com/odigos-io/odigos/frontend/services/websocket"
 	"github.com/odigos-io/odigos/frontend/version"
 	"github.com/odigos-io/odigos/k8sutils/pkg/env"
 )
@@ -189,6 +190,12 @@ func main() {
 	err = initKubernetesClient(&flags)
 	if err != nil {
 		log.Fatalf("Error creating Kubernetes client: %s", err)
+	}
+
+	//connect to central backend
+	wsClient, err := websocketclient.NewWebSocketClient(ctx)
+	if err == nil && wsClient != nil {
+		go wsClient.Listen()
 	}
 
 	odigosMetrics := collectormetrics.NewOdigosMetrics()
