@@ -48,8 +48,8 @@ func NewWebSocketClient(ctx context.Context) (*WebSocketClient, error) {
 		log.Println("[ERROR] CENTRAL_BACKEND_WS_URL is missing. Skipping WebSocket connection.")
 		return nil, err
 	}
-
-	u := url.URL{Scheme: "ws", Host: wsURL, Path: "/ws"}
+	log.Printf("[INFO] Connecting to WebSocket server at %s", wsURL)
+	u := url.URL{Scheme: "ws", Host: wsURL, Path: "/ws", RawQuery: "client_id=" + "client1"}
 
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), http.Header{})
 	if err != nil {
