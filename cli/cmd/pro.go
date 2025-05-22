@@ -13,13 +13,16 @@ import (
 	"syscall"
 
 	"github.com/odigos-io/odigos/api/k8sconsts"
+	"github.com/odigos-io/odigos/cli/cmd/central_utils"
 	"github.com/odigos-io/odigos/cli/cmd/resources"
 	"github.com/odigos-io/odigos/cli/cmd/resources/odigospro"
 	"github.com/odigos-io/odigos/cli/cmd/resources/resourcemanager"
 	cmdcontext "github.com/odigos-io/odigos/cli/pkg/cmd_context"
+	"github.com/odigos-io/odigos/cli/pkg/confirm"
 	"github.com/odigos-io/odigos/cli/pkg/kube"
 	"github.com/odigos-io/odigos/common"
 	"github.com/odigos-io/odigos/common/consts"
+	k8sutils "github.com/odigos-io/odigos/k8sutils/pkg/client"
 	"github.com/odigos-io/odigos/k8sutils/pkg/pro"
 
 	"github.com/spf13/cobra"
@@ -346,6 +349,52 @@ func findPodWithAppLabel(ctx context.Context, client *kube.Client, ns, appLabel 
 	return pod, nil
 }
 
+var centralUninstallCmd = &cobra.Command{
+	Use:   "uninstall",
+	Short: "Uninstall Odigos Central backend and UI components",
+	Long:  "Uninstall the Odigos Central (Enterprise) backend and UI components from the specified namespace.",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
+		client := cmdcontext.KubeClientFromContextOrExit(ctx)
+
+		ns, err := getOdigosCentralNamespace(client, ctx)
+		if err != nil {
+			fmt.Printf("\033[31mERROR\033[0m Unable to detect Odigos Central installation: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Confirmation prompt
+		if !cmd.Flag("yes").Changed {
+			fmt.Printf("About to uninstall Odigos Central from namespace %s\n", ns)
+			confirmed, err := confirm.Ask("Are you sure?")
+			if err != nil || !confirmed {
+				fmt.Println("Aborting uninstall")
+				return
+			}
+		}
+
+		uninstallOdigosCentralResources(ctx, client, ns)
+
+		// Only delete the namespace if not running in Kubernetes (e.g., from a local CLI)
+		if !k8sutils.IsRunningInKubernetes() {
+			createKubeResourceWithLogging(ctx, fmt.Sprintf("Deleting Namespace %s", ns),
+				client, ns, k8sconsts.OdigosSystemLabelCentralKey, uninstallNamespace)
+			waitForNamespaceDeletion(ctx, client, ns)
+		}
+
+		fmt.Printf("\n\u001B[32mSUCCESS:\u001B[0m Odigos Central uninstalled.\n")
+	},
+}
+
+func uninstallOdigosCentralResources(ctx context.Context, client *kube.Client, ns string) {
+	createKubeResourceWithLogging(ctx, "Uninstalling Central Deployments", client, ns, k8sconsts.OdigosSystemLabelCentralKey, central_utils.UninstallCentralDeployments)
+	createKubeResourceWithLogging(ctx, "Uninstalling Central Services", client, ns, k8sconsts.OdigosSystemLabelCentralKey, central_utils.UninstallCentralServices)
+	createKubeResourceWithLogging(ctx, "Uninstalling Central ConfigMaps", client, ns, k8sconsts.OdigosSystemLabelCentralKey, central_utils.UninstallCentralConfigMaps)
+	createKubeResourceWithLogging(ctx, "Uninstalling Central Secrets", client, ns, k8sconsts.OdigosSystemLabelCentralKey, central_utils.UninstallCentralSecrets)
+	createKubeResourceWithLogging(ctx, "Uninstalling Central RBAC", client, ns, k8sconsts.OdigosSystemLabelCentralKey, central_utils.UninstallCentralRBAC)
+
+}
+
 func init() {
 	rootCmd.AddCommand(proCmd)
 
@@ -363,5 +412,25 @@ func init() {
 	centralInstallCmd.Flags().StringVar(&versionFlag, "version", OdigosVersion, "Specify version to install")
 	centralInstallCmd.MarkFlagRequired("onprem-token")
 	centralInstallCmd.Flags().StringVarP(&proNamespaceFlag, "namespace", "n", consts.DefaultOdigosCentralNamespace, "Target namespace for Odigos Central installation")
+	centralUninstallCmd.Flags().Bool("yes", false, "Skip confirmation prompt")
+
+	centralCmd.AddCommand(centralUninstallCmd)
 	centralCmd.AddCommand(portForwardCentralCmd)
+}
+
+func getOdigosCentralNamespace(client *kube.Client, ctx context.Context) (string, error) {
+	centralLabelSelector := fmt.Sprintf("%s=", k8sconsts.OdigosSystemLabelCentralKey)
+	namespaces, err := client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{
+		LabelSelector: centralLabelSelector,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to list namespaces: %w", err)
+	}
+	if len(namespaces.Items) == 0 {
+		return "", fmt.Errorf("no namespace found with label %s", k8sconsts.OdigosSystemLabelCentralKey)
+	}
+	if len(namespaces.Items) > 1 {
+		return "", fmt.Errorf("multiple namespaces found with label %s; please uninstall manually", k8sconsts.OdigosSystemLabelCentralKey)
+	}
+	return namespaces.Items[0].Name, nil
 }
