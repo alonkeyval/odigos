@@ -342,7 +342,7 @@ func stringToWorkloadKind(workloadKind string) (model.K8sResourceKind, bool) {
 func EnsureSourceCRD(ctx context.Context, nsName string, workloadName string, workloadKind model.K8sResourceKind, currentStreamName string) (*v1alpha1.Source, error) {
 	streamLabel := ""
 	if currentStreamName != "" {
-		streamLabel = k8sconsts.SourceGroupLabelPrefix + currentStreamName
+		streamLabel = k8sconsts.SourceDataStreamLabelPrefix + currentStreamName
 	}
 
 	switch workloadKind {

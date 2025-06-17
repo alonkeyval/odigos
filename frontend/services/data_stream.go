@@ -12,6 +12,7 @@ import (
 )
 
 func ExtractDataStreamsFromEntities(sources []v1alpha1.Source, destinations []v1alpha1.Destination) []*model.DataStream {
+
 	var dataStreams []*model.DataStream
 	dataStreams = append(dataStreams, &model.DataStream{Name: "default"})
 
@@ -101,7 +102,7 @@ func ExtractDataStreamsFromSource(primarySource *v1alpha1.Source, secondarySourc
 }
 
 func destinationGroupsNotNull(destination *v1alpha1.Destination) bool {
-	if destination.Spec.SourceSelector != nil && destination.Spec.SourceSelector.Groups != nil {
+	if destination.Spec.SourceSelector != nil && destination.Spec.SourceSelector.DataStreams != nil {
 		return true
 	}
 	return false
@@ -110,14 +111,14 @@ func destinationGroupsNotNull(destination *v1alpha1.Destination) bool {
 func removeStreamNameFromDestination(destination *v1alpha1.Destination, dataStreamName string) {
 	if destinationGroupsNotNull(destination) {
 		// Remove the current stream name from the source selector
-		destination.Spec.SourceSelector.Groups = RemoveStringFromSlice(destination.Spec.SourceSelector.Groups, dataStreamName)
+		destination.Spec.SourceSelector.DataStreams = RemoveStringFromSlice(destination.Spec.SourceSelector.DataStreams, dataStreamName)
 	}
 }
 
 func shouldDeleteDestination(destination *v1alpha1.Destination) bool {
 	if destinationGroupsNotNull(destination) {
 		// If the source selector is not empty after removing the current stream name, we should not delete the destination
-		return len(destination.Spec.SourceSelector.Groups) == 0
+		return len(destination.Spec.SourceSelector.DataStreams) == 0
 	}
 	return true
 }
@@ -145,7 +146,7 @@ func DeleteDestinationsOrRemoveStreamName(ctx context.Context, destinations *v1a
 		dest := dest // capture range variable
 
 		g.Go(func() error {
-			if destinationGroupsNotNull(&dest) && ArrayContains(dest.Spec.SourceSelector.Groups, currentStreamName) {
+			if destinationGroupsNotNull(&dest) && ArrayContains(dest.Spec.SourceSelector.DataStreams, currentStreamName) {
 				err := DeleteDestinationOrRemoveStreamName(ctx, &dest, currentStreamName)
 				if err != nil {
 					return fmt.Errorf("failed to delete destination or remove stream name: %v", err)
@@ -169,13 +170,13 @@ func UpdateDestinationsCurrentStreamName(ctx context.Context, destinations *v1al
 		dest := dest // capture range variable
 
 		g.Go(func() error {
-			if destinationGroupsNotNull(&dest) && ArrayContains(dest.Spec.SourceSelector.Groups, currentStreamName) {
+			if destinationGroupsNotNull(&dest) && ArrayContains(dest.Spec.SourceSelector.DataStreams, currentStreamName) {
 				// Remove the current stream name from the source selector
-				dest.Spec.SourceSelector.Groups = RemoveStringFromSlice(dest.Spec.SourceSelector.Groups, currentStreamName)
+				dest.Spec.SourceSelector.DataStreams = RemoveStringFromSlice(dest.Spec.SourceSelector.DataStreams, currentStreamName)
 
 				// Add the new stream name to the source selector
-				if !ArrayContains(dest.Spec.SourceSelector.Groups, newStreamName) {
-					dest.Spec.SourceSelector.Groups = append(dest.Spec.SourceSelector.Groups, newStreamName)
+				if !ArrayContains(dest.Spec.SourceSelector.DataStreams, newStreamName) {
+					dest.Spec.SourceSelector.DataStreams = append(dest.Spec.SourceSelector.DataStreams, newStreamName)
 				}
 
 				err := UpdateDestination(ctx, &dest)
