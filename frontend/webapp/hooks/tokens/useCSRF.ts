@@ -1,3 +1,4 @@
+import { API } from '@/utils/constants/routes';
 import { useState, useEffect, useCallback } from 'react';
 
 export interface CSRFTokenResponse {
@@ -43,7 +44,7 @@ export const getCSRFTokenFromServer = async (): Promise<{
   error: string | null;
 }> => {
   try {
-    const response = await fetch('/auth/csrf-token', {
+    const response = await fetch(API.CSRF_TOKEN, {
       method: 'GET',
       credentials: 'include', // Include cookies for session validation
       headers: {

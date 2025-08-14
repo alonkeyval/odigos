@@ -37,6 +37,8 @@ const serviceMapDisplayName = 'Service Map';
 const getEntityType = (pathname: string) => {
   return pathname.includes(ROUTES.SOURCES)
     ? EntityTypes.Source
+    : pathname.includes(ROUTES.SOURCE_DASHBOARD)
+    ? EntityTypes.Source
     : pathname.includes(ROUTES.DESTINATIONS)
     ? EntityTypes.Destination
     : pathname.includes(ROUTES.ACTIONS)
@@ -50,6 +52,8 @@ const getSelectedId = (pathname: string) => {
   return pathname.includes(ROUTES.OVERVIEW)
     ? NavIconIds.Overview
     : pathname.includes(ROUTES.SOURCES)
+    ? NavIconIds.Sources
+    : pathname.includes(ROUTES.SOURCE_DASHBOARD)
     ? NavIconIds.Sources
     : pathname.includes(ROUTES.DESTINATIONS)
     ? NavIconIds.Destinations
