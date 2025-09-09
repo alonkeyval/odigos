@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+import { FlexColumn, Status } from '@odigos/ui-kit/components';
+import { StatusType } from '@odigos/ui-kit/types';
+import styled from 'styled-components';
 
 /**
  * WorkloadStatusBanner
@@ -65,38 +68,51 @@ export type WorkloadStatusBannerProps = {
   showDetailsToggle?: boolean;
 };
 
-// --- Visual helpers (minimal inline styles to avoid deps) ---
-const styles = {
-  wrap: (border: string, bg: string): React.CSSProperties => ({
-    border: `1px solid ${border}`,
-    background: bg,
-    borderRadius: 12,
-    padding: 12,
-    display: 'grid',
-    gap: 6,
-  }),
-  row: { display: 'flex', alignItems: 'center', gap: 8 } as React.CSSProperties,
-  pill: (bg: string, color: string): React.CSSProperties => ({
-    background: bg,
-    color,
-    borderRadius: 999,
-    padding: '2px 8px',
-    fontSize: 12,
-    lineHeight: 1.6,
-  }),
-  title: { fontWeight: 600 } as React.CSSProperties,
-  msg: { whiteSpace: 'pre-wrap' } as React.CSSProperties,
-  small: { opacity: 0.8, fontSize: 12 } as React.CSSProperties,
-  details: { marginTop: 4, paddingTop: 6, borderTop: '1px dashed rgba(0,0,0,0.12)' } as React.CSSProperties,
-};
+// --- Styled components ---
+const Wrapper = styled(FlexColumn)<{ $border: string }>`
+  border: 1px solid ${(p) => p.$border};
+  border-radius: 12px;
+  padding: 12px;
+  gap: 8px;
+  background: #ffffff;
+`;
+
+const Row = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const Details = styled.div`
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+`;
+
+const SmallFooter = styled.div`
+  opacity: 0.8;
+  font-size: 12px;
+  font-family: ${({ theme }) => theme.font_family.primary};
+`;
+
+const ToggleButton = styled.button`
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+`;
 
 // --- Classification logic ---
 function summarize(workload?: Workload | null) {
   if (!workload) {
     return {
       variant: 'info' as const,
+      status: StatusType.Info,
       title: 'No data',
-      message: 'This workload has no data yet.',
+      subtitle: 'This workload has no data yet.',
     };
   }
 
@@ -129,8 +145,9 @@ function summarize(workload?: Workload | null) {
     const message = unsupportedTriplet.message || 'Instrumentation unsupported for this workload.';
     return {
       variant: 'error' as const,
+      status: StatusType.Error,
       title: 'Needs attention',
-      message,
+      subtitle: message,
       details: perContainerIssues.length
         ? perContainerIssues.map((c) => `• ${c.name} (${c.language ?? 'unknown'}): ${c.reason ?? 'Unsupported'}${c.message ? ` – ${c.message}` : ''}`).join('\n')
         : undefined,
@@ -141,8 +158,9 @@ function summarize(workload?: Workload | null) {
   if ((odigos?.status === 'Success' || injPods?.status === 'Success') && (throughput > 0 || total > 0)) {
     return {
       variant: 'success' as const,
+      status: StatusType.Success,
       title: 'All good',
-      message: 'Instrumented and sending telemetry.',
+      subtitle: 'Instrumented and sending telemetry.',
     };
   }
 
@@ -150,8 +168,9 @@ function summarize(workload?: Workload | null) {
   if ((odigos?.status === 'Success' || injPods?.status === 'Success') && expecting === true && throughput === 0) {
     return {
       variant: 'warning' as const,
+      status: StatusType.Warning,
       title: 'Waiting for telemetry',
-      message: 'Agent is injected but no telemetry received yet. Generate traffic or verify destination configuration.',
+      subtitle: 'Agent is injected but no telemetry received yet. Generate traffic or verify destination configuration.',
     };
   }
 
@@ -159,36 +178,37 @@ function summarize(workload?: Workload | null) {
   if (expecting === false) {
     return {
       variant: 'info' as const,
+      status: StatusType.Info,
       title: 'Not expecting telemetry',
-      message: 'This workload is not expected to emit data at the moment.',
+      subtitle: 'This workload is not expected to emit data at the moment.',
     };
   }
 
   // 5) Default informational state
   return {
     variant: 'info' as const,
+    status: StatusType.Info,
     title: 'Status unclear',
-    message: odigos?.message || injEnabled?.message || 'Awaiting more signals…',
+    subtitle: odigos?.message || injEnabled?.message || 'Awaiting more signals…',
   };
 }
 
 function tone(variant: 'success' | 'warning' | 'error' | 'info') {
   switch (variant) {
     case 'success':
-      return { border: '#16a34a', bg: '#ecfdf5', emoji: '✅' };
+      return { border: '#16a34a' };
     case 'warning':
-      return { border: '#ca8a04', bg: '#fffbeb', emoji: '⚠️' };
+      return { border: '#ca8a04' };
     case 'error':
-      return { border: '#dc2626', bg: '#fef2f2', emoji: '❌' };
+      return { border: '#dc2626' };
     default:
-      return { border: '#2563eb', bg: '#eff6ff', emoji: 'ℹ️' };
+      return { border: '#2563eb' };
   }
 }
 
 export default function WorkloadStatusBanner({ workload, className, showDetailsToggle = true }: WorkloadStatusBannerProps) {
   const summary = React.useMemo(() => summarize(workload), [workload]);
   const t = tone(summary.variant);
-  console.log('workload', workload);
   const ns = workload?.id.namespace;
   const kind = workload?.id.kind;
   const name = workload?.id.name;
@@ -201,58 +221,21 @@ export default function WorkloadStatusBanner({ workload, className, showDetailsT
   const [open, setOpen] = React.useState(false);
 
   return (
-    <div className={className} style={styles.wrap(t.border, t.bg)} role='status' aria-live='polite'>
-      <div style={styles.row}>
-        <span aria-hidden>{t.emoji}</span>
-        <span style={styles.title}>{summary.title}</span>
+    <Wrapper className={className} $border={t.border} role='status' aria-live='polite'>
+      <Row>
+        <Status status={summary.status} title={summary.title} subtitle={summary.subtitle} withIcon withBackground />
         <span style={{ flex: 1 }} />
-        {ns && (
-          <span style={styles.pill('#e5e7eb', '#111827')} title='Namespace'>
-            {ns}
-          </span>
-        )}
-        {kind && (
-          <span style={styles.pill('#e5e7eb', '#111827')} title='Kind'>
-            {kind}
-          </span>
-        )}
-        {name && (
-          <span style={styles.pill('#e5e7eb', '#111827')} title='Name'>
-            {name}
-          </span>
-        )}
-        {languagePills.map((p) => (
-          <span key={p.key} style={styles.pill('#ddd6fe', '#4c1d95')} title='Detected language'>
-            {p.label}
-          </span>
-        ))}
-      </div>
-
-      {summary.message && <div style={styles.msg}>{summary.message}</div>}
+      </Row>
 
       {summary.details && showDetailsToggle && (
-        <div style={styles.details}>
-          <button
-            type='button'
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              padding: 0,
-              cursor: 'pointer',
-              color: '#2563eb',
-              fontSize: 13,
-              fontWeight: 600,
-            }}
-          >
+        <Details>
+          <ToggleButton type='button' onClick={() => setOpen((v) => !v)} aria-expanded={open}>
             {open ? 'Hide details' : 'Show details'}
-          </button>
+          </ToggleButton>
           {open && <pre style={{ marginTop: 6, fontSize: 12, whiteSpace: 'pre-wrap' }}>{summary.details}</pre>}
-        </div>
+        </Details>
       )}
 
-      {/* tiny footer with bytes/throughput if present */}
       {(() => {
         const tm = workload?.telemetryMetrics?.[0];
         if (!tm) return null;
@@ -260,12 +243,12 @@ export default function WorkloadStatusBanner({ workload, className, showDetailsT
         const total = tm.totalDataSentBytes ?? 0;
         const expecting = tm.expectingTelemetry?.isExpectingTelemetry;
         return (
-          <div style={styles.small}>
+          <SmallFooter>
             {`telemetry: throughput=${throughput}B/s, total=${total}B`}
             {typeof expecting === 'boolean' ? `, expecting=${expecting}` : ''}
-          </div>
+          </SmallFooter>
         );
       })()}
-    </div>
+    </Wrapper>
   );
 }

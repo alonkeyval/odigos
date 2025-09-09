@@ -4,7 +4,7 @@ import React from 'react';
 import { useQuery } from '@apollo/client';
 import { DESCRIBE_WORKLOAD, LIST_WORKLOAD_IDS } from '@/graphql';
 import WorkloadStatusBanner from './WorkloadStatusBanner';
-import { CenterThis, FadeLoader, FlexColumn, Header, Text } from '@odigos/ui-kit/components';
+import { CenterThis, FadeLoader, FlexColumn, Text } from '@odigos/ui-kit/components';
 
 export default function Page() {
   const [namespace, setNamespace] = React.useState<string | null>('default');
@@ -48,18 +48,6 @@ export default function Page() {
 
   return (
     <FlexColumn style={{ padding: 16, gap: 16 }}>
-      <Header
-        left={[
-          <Text key='title' family='primary' style={{ fontWeight: 700 }}>
-            Workloads explorer
-          </Text>,
-          <Text key='subtitle' family='secondary' style={{ opacity: 0.8 }}>
-            Browse workloads, filter by id, and inspect status and raw data.
-          </Text>,
-        ]}
-        right={[]}
-      />
-
       <div
         style={{
           display: 'grid',
@@ -71,7 +59,6 @@ export default function Page() {
         <label style={{ display: 'grid', gap: 6 }}>
           <Text style={{ opacity: 0.8 }}>Namespace</Text>
           <select value={namespace ?? ''} onChange={(e) => setNamespace(e.target.value || null)} style={{ padding: 8, borderRadius: 8 }}>
-            <option value=''>All namespaces</option>
             {[...new Set(workloads.map((w) => w.id.namespace))].map((ns) => (
               <option key={ns} value={ns}>
                 {ns}
@@ -83,7 +70,6 @@ export default function Page() {
         <label style={{ display: 'grid', gap: 6 }}>
           <Text style={{ opacity: 0.8 }}>Kind</Text>
           <select value={kind ?? ''} onChange={(e) => setKind(e.target.value || null)} disabled={!namespace} style={{ padding: 8, borderRadius: 8 }}>
-            <option value=''>All kinds</option>
             {[...new Set(workloads.filter((w) => !namespace || w.id.namespace === namespace).map((w) => w.id.kind))].map((k) => (
               <option key={k} value={k}>
                 {k}
@@ -95,7 +81,6 @@ export default function Page() {
         <label style={{ display: 'grid', gap: 6 }}>
           <Text style={{ opacity: 0.8 }}>Workload name</Text>
           <select value={name ?? ''} onChange={(e) => setName(e.target.value || null)} disabled={!namespace || !kind} style={{ padding: 8, borderRadius: 8 }}>
-            <option value=''>All workloads</option>
             {workloads
               .filter((w) => (!namespace || w.id.namespace === namespace) && (!kind || w.id.kind === kind))
               .map((w) => (
