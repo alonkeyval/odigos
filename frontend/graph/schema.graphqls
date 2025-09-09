@@ -948,6 +948,8 @@ type Query {
 
   # get all sources that match the filter
   workloads(filter: WorkloadFilter): [K8sWorkload!]!
+
+  describeWorkload(filter: WorkloadFilter): [K8sWorkload!]!
 }
 
 type Mutation {

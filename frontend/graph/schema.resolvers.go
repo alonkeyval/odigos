@@ -1342,6 +1342,11 @@ func (r *queryResolver) Workloads(ctx context.Context, filter *model.WorkloadFil
 	return sources, nil
 }
 
+// DescribeWorkload is the resolver for the describeWorkload field.
+func (r *queryResolver) DescribeWorkload(ctx context.Context, filter *model.WorkloadFilter) ([]*model.K8sWorkload, error) {
+	return r.Workloads(ctx, filter)
+}
+
 // ComputePlatform returns ComputePlatformResolver implementation.
 func (r *Resolver) ComputePlatform() ComputePlatformResolver { return &computePlatformResolver{r} }
 
