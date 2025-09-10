@@ -3,7 +3,7 @@ import { gql } from '@apollo/client';
 // For the source drawer what is important is the workloadOdigosHealthStatus
 export const DESCRIBE_WORKLOAD = gql`
   query DescribeWorkload($filter: WorkloadFilter) {
-    describeWorkload(filter: $filter) {
+    workloads(filter: $filter) {
       id {
         namespace
         kind

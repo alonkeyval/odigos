@@ -741,7 +741,6 @@ type ComplexityRoot struct {
 		Config                            func(childComplexity int) int
 		DescribeOdigos                    func(childComplexity int) int
 		DescribeSource                    func(childComplexity int, namespace string, kind string, name string) int
-		DescribeWorkload                  func(childComplexity int, filter *model.WorkloadFilter) int
 		DestinationCategories             func(childComplexity int) int
 		GetOverviewMetrics                func(childComplexity int) int
 		GetServiceMap                     func(childComplexity int) int
@@ -945,7 +944,6 @@ type QueryResolver interface {
 	SourceConditions(ctx context.Context) ([]*model.SourceConditions, error)
 	InstrumentationInstanceComponents(ctx context.Context, namespace string, kind string, name string) ([]*model.InstrumentationInstanceComponent, error)
 	Workloads(ctx context.Context, filter *model.WorkloadFilter) ([]*model.K8sWorkload, error)
-	DescribeWorkload(ctx context.Context, filter *model.WorkloadFilter) ([]*model.K8sWorkload, error)
 }
 
 type executableSchema struct {
@@ -4082,18 +4080,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.DescribeSource(childComplexity, args["namespace"].(string), args["kind"].(string), args["name"].(string)), true
 
-	case "Query.describeWorkload":
-		if e.complexity.Query.DescribeWorkload == nil {
-			break
-		}
-
-		args, err := ec.field_Query_describeWorkload_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.DescribeWorkload(childComplexity, args["filter"].(*model.WorkloadFilter)), true
-
 	case "Query.destinationCategories":
 		if e.complexity.Query.DestinationCategories == nil {
 			break
@@ -5632,34 +5618,6 @@ func (ec *executionContext) field_Query_describeSource_argsName(
 	}
 
 	var zeroVal string
-	return zeroVal, nil
-}
-
-func (ec *executionContext) field_Query_describeWorkload_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := ec.field_Query_describeWorkload_argsFilter(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["filter"] = arg0
-	return args, nil
-}
-func (ec *executionContext) field_Query_describeWorkload_argsFilter(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*model.WorkloadFilter, error) {
-	if _, ok := rawArgs["filter"]; !ok {
-		var zeroVal *model.WorkloadFilter
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("filter"))
-	if tmp, ok := rawArgs["filter"]; ok {
-		return ec.unmarshalOWorkloadFilter2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐWorkloadFilter(ctx, tmp)
-	}
-
-	var zeroVal *model.WorkloadFilter
 	return zeroVal, nil
 }
 
@@ -26720,93 +26678,6 @@ func (ec *executionContext) fieldContext_Query_workloads(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_describeWorkload(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_describeWorkload(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().DescribeWorkload(rctx, fc.Args["filter"].(*model.WorkloadFilter))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.K8sWorkload)
-	fc.Result = res
-	return ec.marshalNK8sWorkload2ᚕᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐK8sWorkloadᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_describeWorkload(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_K8sWorkload_id(ctx, field)
-			case "serviceName":
-				return ec.fieldContext_K8sWorkload_serviceName(ctx, field)
-			case "workloadOdigosHealthStatus":
-				return ec.fieldContext_K8sWorkload_workloadOdigosHealthStatus(ctx, field)
-			case "conditions":
-				return ec.fieldContext_K8sWorkload_conditions(ctx, field)
-			case "markedForInstrumentation":
-				return ec.fieldContext_K8sWorkload_markedForInstrumentation(ctx, field)
-			case "runtimeInfo":
-				return ec.fieldContext_K8sWorkload_runtimeInfo(ctx, field)
-			case "agentEnabled":
-				return ec.fieldContext_K8sWorkload_agentEnabled(ctx, field)
-			case "rollout":
-				return ec.fieldContext_K8sWorkload_rollout(ctx, field)
-			case "containers":
-				return ec.fieldContext_K8sWorkload_containers(ctx, field)
-			case "pods":
-				return ec.fieldContext_K8sWorkload_pods(ctx, field)
-			case "podsAgentInjectionStatus":
-				return ec.fieldContext_K8sWorkload_podsAgentInjectionStatus(ctx, field)
-			case "podsHealthStatus":
-				return ec.fieldContext_K8sWorkload_podsHealthStatus(ctx, field)
-			case "workloadHealthStatus":
-				return ec.fieldContext_K8sWorkload_workloadHealthStatus(ctx, field)
-			case "processesHealthStatus":
-				return ec.fieldContext_K8sWorkload_processesHealthStatus(ctx, field)
-			case "telemetryMetrics":
-				return ec.fieldContext_K8sWorkload_telemetryMetrics(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type K8sWorkload", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_describeWorkload_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query___type(ctx, field)
 	if err != nil {
@@ -39254,28 +39125,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_workloads(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "describeWorkload":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_describeWorkload(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
