@@ -1,18 +1,6 @@
 import { gql } from '@apollo/client';
 
-export const LIST_WORKLOAD_IDS = gql`
-  query ListWorkloadIds($filter: WorkloadFilter) {
-    describeWorkload(filter: $filter) {
-      id {
-        namespace
-        kind
-        name
-      }
-      serviceName
-    }
-  }
-`;
-
+// For the source drawer what is important is the workloadOdigosHealthStatus
 export const DESCRIBE_WORKLOAD = gql`
   query DescribeWorkload($filter: WorkloadFilter) {
     describeWorkload(filter: $filter) {
