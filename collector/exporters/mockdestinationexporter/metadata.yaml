@@ -1,8 +1,0 @@
-type: mockdestination
-
-status:
-  class: exporter
-  stability:
-    beta: [traces, metrics, logs]
-  codeowners:
-    active: [blumamir]

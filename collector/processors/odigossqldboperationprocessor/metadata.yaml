@@ -1,8 +1,0 @@
-type: odigossqldboperationprocessor
-status:
-  class: processor
-  stability:
-    beta: [traces]
-  distributions: [contrib]
-  codeowners:
-    active: [tamird]

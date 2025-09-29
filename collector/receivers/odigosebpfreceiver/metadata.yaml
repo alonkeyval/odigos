@@ -1,8 +1,0 @@
-type: odigosebpf
-status:
-  class: receiver
-
-  stability:
-    beta: [traces]
-  codeowners:
-    active: [tamirdavid]
