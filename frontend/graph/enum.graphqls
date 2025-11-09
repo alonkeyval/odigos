@@ -67,3 +67,122 @@ enum DesiredStateProgress {
 
     Unknown
 }
+
+# Core enums moved from schema.graphqls
+enum ComputePlatformType {
+  K8S
+  VM
+}
+
+enum K8sResourceKind {
+  Deployment
+  DaemonSet
+  StatefulSet
+  CronJob
+  ConfigMap
+  DeploymentConfig
+}
+
+enum ConditionStatus {
+  success
+  error
+  disabled
+  loading
+}
+
+enum ProgrammingLanguage {
+  Unspecified
+  Java
+  Go
+  JavaScript
+  Python
+  DotNet
+}
+
+enum SignalType {
+  TRACES
+  traces
+  METRICS
+  metrics
+  LOGS
+  logs
+}
+
+enum SpanKind {
+  Internal
+  Server
+  Client
+  Producer
+  Consumer
+}
+
+enum InstallationStatus {
+  NEW
+  APPS_SELECTED
+  FINISHED
+}
+
+enum Tier {
+  community
+  cloud
+  onprem
+}
+
+enum ActionType {
+  K8sAttributesResolver
+  AddClusterInfo
+  DeleteAttribute
+  RenameAttribute
+  PiiMasking
+  ErrorSampler
+  ProbabilisticSampler
+  LatencySampler
+  ServiceNameSampler
+  SpanAttributeSampler
+  UnknownType
+}
+
+enum InstrumentationRuleType {
+  CodeAttributes
+  HeadersCollection
+  PayloadCollection
+  CustomInstrumentation
+  UnknownType
+}
+
+# Filter/condition enums
+enum StringOperation {
+  exists
+  equals
+  not_equals
+  contains
+  not_contains
+  regex
+}
+enum K8sAttributesFrom {
+  pod
+  namespace
+}
+enum NumberOperation {
+  exists
+  equals
+  not_equals
+  greater_than
+  less_than
+  greater_than_or_equal
+  less_than_or_equal
+}
+enum BooleanOperation {
+  exists
+  equals
+}
+enum JsonOperation {
+  exists
+  equals
+  not_equals
+  is_valid_json
+  is_invalid_json
+  jsonpath_exists
+  key_equals
+  key_not_equals
+}

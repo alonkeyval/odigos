@@ -1,0 +1,39 @@
+"""
+Destination catalog/types schema split from schema.graphqls.
+"""
+type CustomReadDataLabel {
+  condition: String!
+  title: String!
+  value: String!
+}
+
+type DestinationFieldYamlProperties {
+  name: String!
+  displayName: String!
+  componentType: String!
+  componentProperties: String! # Using String to store JSON data as a string
+  secret: Boolean!
+  initialValue: String!
+  renderCondition: [String!]!
+  hideFromReadData: [String!]!
+  customReadDataLabels: [CustomReadDataLabel!]!
+}
+
+type DestinationTypesCategoryItem {
+  type: String!
+  displayName: String!
+  imageUrl: String!
+  supportedSignals: SupportedSignals!
+  testConnectionSupported: Boolean!
+  fields: [DestinationFieldYamlProperties!]!
+}
+
+type DestinationsCategory {
+  name: String!
+  description: String!
+  items: [DestinationTypesCategoryItem!]!
+}
+
+type GetDestinationCategories {
+  categories: [DestinationsCategory!]!
+}

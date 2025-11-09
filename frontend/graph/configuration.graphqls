@@ -1,0 +1,132 @@
+"""
+Configuration types and operations split from schema.graphqls.
+"""
+type OdigosConfiguration {
+  karpenterEnabled: Boolean
+  allowConcurrentAgents: Boolean
+  uiPaginationLimit: Int
+  centralBackendURL: String
+  oidc: OidcConfiguration
+  clusterName: String
+  imagePrefix: String
+  ignoredNamespaces: [String]
+  ignoredContainers: [String]
+  profiles: [String]
+  mountMethod: String
+  agentEnvVarsInjectionMethod: String
+  customContainerRuntimeSocketPath: String
+  odigletHealthProbeBindPort: Int
+  rollbackDisabled: Boolean
+  rollbackGraceTime: String
+  rollbackStabilityWindow: String
+  rollout: RolloutConfiguration
+  collectorNode: CollectorNode
+  collectorGateway: CollectorGateway
+  nodeSelector: String # JSON string representation of key-value pairs
+}
+
+type OidcConfiguration {
+  tenantUrl: String
+  clientId: String
+  clientSecret: String
+}
+
+type RolloutConfiguration {
+  automaticRolloutDisabled: Boolean
+}
+
+type CollectorNode {
+  collectorOwnMetricsPort: Int
+  requestMemoryMiB: Int
+  limitMemoryMiB: Int
+  requestCPUm: Int
+  limitCPUm: Int
+  memoryLimiterLimitMiB: Int
+  memoryLimiterSpikeLimitMiB: Int
+  goMemLimitMiB: Int
+  k8sNodeLogsDirectory: String
+}
+
+type CollectorGateway {
+  requestMemoryMiB: Int
+  limitMemoryMiB: Int
+  requestCPUm: Int
+  limitCPUm: Int
+  memoryLimiterLimitMiB: Int
+  memoryLimiterSpikeLimitMiB: Int
+  goMemLimitMiB: Int
+  minReplicas: Int
+  maxReplicas: Int
+}
+
+input OdigosConfigurationInput {
+  karpenterEnabled: Boolean
+  allowConcurrentAgents: Boolean
+  uiPaginationLimit: Int
+  centralBackendURL: String
+  oidc: OidcConfigurationInput
+  clusterName: String
+  imagePrefix: String
+  ignoredNamespaces: [String]
+  ignoredContainers: [String]
+  profiles: [String]
+  mountMethod: String
+  agentEnvVarsInjectionMethod: String
+  customContainerRuntimeSocketPath: String
+  odigletHealthProbeBindPort: Int
+  rollbackDisabled: Boolean
+  rollbackGraceTime: String
+  rollbackStabilityWindow: String
+  rollout: RolloutConfigurationInput
+  collectorNode: CollectorNodeInput
+  collectorGateway: CollectorGatewayInput
+  nodeSelector: String # JSON string representation of language mappings
+}
+
+input OidcConfigurationInput {
+  tenantUrl: String
+  clientId: String
+  clientSecret: String
+}
+
+input RolloutConfigurationInput {
+  automaticRolloutDisabled: Boolean
+}
+
+input CollectorNodeInput {
+  collectorOwnMetricsPort: Int
+  requestMemoryMiB: Int
+  limitMemoryMiB: Int
+  requestCPUm: Int
+  limitCPUm: Int
+  memoryLimiterLimitMiB: Int
+  memoryLimiterSpikeLimitMiB: Int
+  goMemLimitMiB: Int
+  k8sNodeLogsDirectory: String
+}
+
+input CollectorGatewayInput {
+  requestMemoryMiB: Int
+  limitMemoryMiB: Int
+  requestCPUm: Int
+  limitCPUm: Int
+  memoryLimiterLimitMiB: Int
+  memoryLimiterSpikeLimitMiB: Int
+  goMemLimitMiB: Int
+  minReplicas: Int
+  maxReplicas: Int
+}
+
+extend type Query {
+  odigosConfig: OdigosConfiguration
+  config: GetConfigResponse
+}
+
+extend type Mutation {
+  updateApiToken(token: String!): Boolean!
+  updateOdigosConfig(odigosConfig: OdigosConfigurationInput!): Boolean!
+  uninstrumentCluster: Boolean!
+  pauseOdigos: Boolean!
+  # enterprise: remove the central-proxy from this cluster
+  deleteCentralProxy: Boolean!
+}

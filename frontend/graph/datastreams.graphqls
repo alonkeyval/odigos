@@ -1,0 +1,15 @@
+"""
+DataStreams types and mutations split from schema.graphqls.
+"""
+type DataStream {
+  name: String!
+}
+
+input DataStreamInput {
+  name: String!
+}
+
+extend type Mutation {
+  updateDataStream(id: ID!, dataStream: DataStreamInput!): DataStream!
+  deleteDataStream(id: ID!): Boolean!
+}

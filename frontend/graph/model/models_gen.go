@@ -57,6 +57,7 @@ type ActionFieldsInput struct {
 	AttributeFilters            []*SpanAttributeFilterInput    `json:"attributeFilters,omitempty"`
 }
 
+// Actions types, inputs and operations split from schema.graphqls.
 type ActionInput struct {
 	Type     ActionType         `json:"type"`
 	Name     *string            `json:"name,omitempty"`
@@ -66,6 +67,7 @@ type ActionInput struct {
 	Fields   *ActionFieldsInput `json:"fields"`
 }
 
+// Compute Platform types and root query field split from schema.graphqls.
 type APIToken struct {
 	Token     string `json:"token"`
 	Name      string `json:"name"`
@@ -248,12 +250,14 @@ type CustomInstrumentationsInput struct {
 	Java   []*JavaCustomProbeInput   `json:"java,omitempty"`
 }
 
+// Destination catalog/types schema split from schema.graphqls.
 type CustomReadDataLabel struct {
 	Condition string `json:"condition"`
 	Title     string `json:"title"`
 	Value     string `json:"value"`
 }
 
+// DataStreams types and mutations split from schema.graphqls.
 type DataStream struct {
 	Name string `json:"name"`
 }
@@ -338,6 +342,7 @@ type DistroParam struct {
 	Value string `json:"value"`
 }
 
+// Analyze domain types and queries split from schema.graphqls.
 type EntityProperty struct {
 	Name    string  `json:"name"`
 	Value   string  `json:"value"`
@@ -350,6 +355,7 @@ type EnvVar struct {
 	Value string `json:"value"`
 }
 
+// Destinations entities, inputs, and operations split from schema.graphqls.
 type ExportedSignals struct {
 	Traces  bool `json:"traces"`
 	Metrics bool `json:"metrics"`
@@ -466,6 +472,7 @@ type InstrumentationLibraryGlobalIDInput struct {
 	Language *ProgrammingLanguage `json:"language,omitempty"`
 }
 
+// Instrumentation rules types, inputs, and mutations split from schema.graphqls.
 type InstrumentationRule struct {
 	Type                     InstrumentationRuleType           `json:"type"`
 	RuleID                   string                            `json:"ruleId"`
@@ -802,6 +809,7 @@ type OdigosAnalyze struct {
 	HasErrors            bool                     `json:"hasErrors"`
 }
 
+// Configuration types and operations split from schema.graphqls.
 type OdigosConfiguration struct {
 	KarpenterEnabled                 *bool                 `json:"karpenterEnabled,omitempty"`
 	AllowConcurrentAgents            *bool                 `json:"allowConcurrentAgents,omitempty"`
@@ -974,6 +982,7 @@ type RuntimeInfoAnalyze struct {
 	Containers []*ContainerRuntimeInfoAnalyze `json:"containers"`
 }
 
+// Service Map types and query split from schema.graphqls.
 type ServiceMap struct {
 	Services []*ServiceMapFromSource `json:"services"`
 }

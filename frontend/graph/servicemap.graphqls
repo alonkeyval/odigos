@@ -1,0 +1,21 @@
+"""Service Map types and query split from schema.graphqls."""
+
+type ServiceMap {
+  services: [ServiceMapFromSource!]!
+}
+
+type ServiceMapFromSource {
+  serviceName: String!
+  services: [ServiceMapToSource!]!
+}
+
+type ServiceMapToSource {
+  serviceName: String!
+  requests: Int!
+  dateTime: String!
+}
+
+extend type Query {
+  getServiceMap: ServiceMap!
+}
+

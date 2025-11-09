@@ -1,0 +1,100 @@
+type SourceContainer {
+  containerName: String!
+  language: String!
+  runtimeVersion: String!
+  overriden: Boolean!
+  instrumented: Boolean!
+  instrumentationMessage: String!
+  otelDistroName: String
+}
+
+type Condition {
+  status: ConditionStatus!
+  type: String!
+  reason: String
+  message: String
+  lastTransitionTime: String
+}
+
+type K8sActualNamespace {
+  name: String!
+  selected: Boolean!
+  dataStreamNames: [String]!
+  sources: [K8sActualSource]!
+}
+
+input K8sDesiredNamespaceInput {
+  autoInstrument: Boolean
+}
+
+input K8sNamespaceId {
+  name: String!
+}
+
+type K8sActualSource {
+  namespace: String!
+  name: String!
+  kind: K8sResourceKind!
+  dataStreamNames: [String]!
+  numberOfInstances: Int
+  selected: Boolean
+  otelServiceName: String
+  containers: [SourceContainer!]
+  conditions: [Condition!]
+  workloadOdigosHealthStatus: DesiredConditionStatus
+}
+
+input K8sDesiredSourceInput {
+  serviceName: String
+  autoInstrument: Boolean
+}
+
+type PodWorkload {
+  namespace: String!
+  name: String!
+  kind: K8sResourceKind!
+}
+
+input PodWorkloadInput {
+  namespace: String!
+  kind: K8sResourceKind!
+  name: String!
+}
+
+input K8sSourceId {
+  namespace: String!
+  kind: K8sResourceKind!
+  name: String!
+}
+
+input PersistNamespaceItemInput {
+  namespace: String!
+  selected: Boolean!
+  currentStreamName: String!
+}
+
+input PersistNamespaceSourceInput {
+  namespace: String!
+  name: String!
+  kind: K8sResourceKind!
+  selected: Boolean!
+  currentStreamName: String!
+}
+
+input PatchSourceRequestInput {
+  currentStreamName: String!
+  otelServiceName: String
+  # for runtime override
+  containerName: String
+  language: String
+  version: String
+}
+
+extend type Mutation {
+  persistK8sNamespaces(namespaces: [PersistNamespaceItemInput!]!): Boolean!
+  persistK8sSources(sources: [PersistNamespaceSourceInput!]!): Boolean!
+  updateK8sActualSource(
+    sourceId: K8sSourceId!
+    patchSourceRequest: PatchSourceRequestInput!
+  ): Boolean!
+}

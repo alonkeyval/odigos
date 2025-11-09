@@ -1,0 +1,75 @@
+"""
+Destinations entities, inputs, and operations split from schema.graphqls.
+"""
+type ExportedSignals {
+  traces: Boolean!
+  metrics: Boolean!
+  logs: Boolean!
+}
+
+type Destination {
+  id: ID!
+  type: String!
+  name: String!
+  disabled: Boolean!
+  dataStreamNames: [String]!
+  exportedSignals: ExportedSignals!
+  fields: String!
+  destinationType: DestinationTypesCategoryItem!
+  conditions: [Condition!]
+}
+
+type GetConfigResponse {
+  readonly: Boolean!
+  tier: Tier!
+  installationMethod: String!
+  installationStatus: InstallationStatus!
+}
+
+input DestinationInput {
+  name: String!
+  type: String!
+  currentStreamName: String!
+  exportedSignals: ExportedSignalsInput!
+  fields: [FieldInput!]!
+  disabled: Boolean
+}
+
+input FieldInput {
+  key: String!
+  value: String!
+}
+
+input ExportedSignalsInput {
+  traces: Boolean!
+  metrics: Boolean!
+  logs: Boolean!
+}
+
+type TestConnectionResponse {
+  succeeded: Boolean!
+  statusCode: Int!
+  destinationType: String
+  message: String
+  reason: String
+}
+
+type DestinationDetails {
+  type: String!
+  urlString: String!
+  fields: String!
+}
+
+extend type Query {
+  destinationCategories: GetDestinationCategories
+  potentialDestinations: [DestinationDetails!]!
+}
+
+extend type Mutation {
+  createNewDestination(destination: DestinationInput!): Destination!
+  updateDestination(id: ID!, destination: DestinationInput!): Destination!
+  deleteDestination(id: ID!, currentStreamName: String!): Boolean!
+  testConnectionForDestination(
+    destination: DestinationInput!
+  ): TestConnectionResponse!
+}

@@ -15,6 +15,7 @@ import (
 	"github.com/odigos-io/odigos/frontend/graph/loaders"
 	"github.com/odigos-io/odigos/frontend/graph/model"
 	"github.com/odigos-io/odigos/frontend/graph/status"
+	"github.com/odigos-io/odigos/frontend/services"
 	frontendcommon "github.com/odigos-io/odigos/frontend/services/common"
 	sourceutils "github.com/odigos-io/odigos/k8sutils/pkg/source"
 )
@@ -572,6 +573,42 @@ func (r *k8sWorkloadTelemetryMetricsResolver) ExpectingTelemetry(ctx context.Con
 	}
 
 	return status.CalculateExpectingTelemetryStatus(ic, pods, obj.TotalDataSentBytes), nil
+}
+
+// RestartWorkloads is the resolver for the restartWorkloads field.
+func (r *mutationResolver) RestartWorkloads(ctx context.Context, sourceIds []*model.K8sSourceID) (bool, error) {
+	err := services.WithGoroutine(ctx, len(sourceIds), func(goFunc func(func() error)) {
+		for _, sourceID := range sourceIds {
+			goFunc(func() error {
+				err := services.RolloutRestartWorkload(ctx, sourceID.Namespace, sourceID.Name, sourceID.Kind)
+				if err != nil {
+					return fmt.Errorf("failed to restart workload %s/%s/%s: %v", sourceID.Namespace, sourceID.Name, sourceID.Kind, err)
+				}
+				return nil
+			})
+		}
+	})
+
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// Workloads is the resolver for the workloads field.
+func (r *queryResolver) Workloads(ctx context.Context, filter *model.WorkloadFilter) ([]*model.K8sWorkload, error) {
+	l := loaders.For(ctx)
+	err := l.SetFilters(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	sources := make([]*model.K8sWorkload, 0)
+	for _, sourceId := range l.GetWorkloadIds() {
+		sources = append(sources, &model.K8sWorkload{
+			ID: &sourceId,
+		})
+	}
+	return sources, nil
 }
 
 // K8sWorkload returns K8sWorkloadResolver implementation.

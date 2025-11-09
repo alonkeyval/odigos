@@ -455,3 +455,12 @@ type K8sWorkload {
   # e.g. how much data is generated from this source as counted in the node collector.
   telemetryMetrics: [K8sWorkloadTelemetryMetrics!]!
 }
+
+extend type Query {
+  # get all sources that match the filter
+  workloads(filter: WorkloadFilter): [K8sWorkload!]!
+}
+
+extend type Mutation {
+  restartWorkloads(sourceIds: [K8sSourceId!]!): Boolean!
+}

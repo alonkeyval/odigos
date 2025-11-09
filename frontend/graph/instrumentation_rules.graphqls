@@ -1,0 +1,165 @@
+"""
+Instrumentation rules types, inputs, and mutations split from schema.graphqls.
+"""
+type InstrumentationRule {
+  type: InstrumentationRuleType!
+  ruleId: ID!
+  ruleName: String
+  notes: String
+  disabled: Boolean
+  mutable: Boolean!
+  profileName: String!
+  workloads: [PodWorkload!]
+  instrumentationLibraries: [InstrumentationLibraryGlobalId!]
+  conditions: [Condition!]
+  codeAttributes: CodeAttributes
+  headersCollection: HeadersCollection
+  payloadCollection: PayloadCollection
+  customInstrumentations: CustomInstrumentations
+}
+
+input InstrumentationRuleInput {
+  ruleName: String
+  notes: String
+  disabled: Boolean
+  workloads: [PodWorkloadInput!]
+  instrumentationLibraries: [InstrumentationLibraryGlobalIdInput!]
+  codeAttributes: CodeAttributesInput
+  headersCollection: HeadersCollectionInput
+  payloadCollection: PayloadCollectionInput
+  customInstrumentations: CustomInstrumentationsInput
+}
+
+type InstrumentationLibraryGlobalId {
+  name: String!
+  spanKind: SpanKind
+  language: ProgrammingLanguage
+}
+
+input InstrumentationLibraryGlobalIdInput {
+  name: String!
+  spanKind: SpanKind
+  language: ProgrammingLanguage
+}
+
+type HeadersCollection {
+  headerKeys: [String]
+}
+
+input HeadersCollectionInput {
+  headerKeys: [String]
+}
+
+#
+# Payload and code attributes (used by instrumentation rules)
+#
+type HttpPayloadCollection {
+  mimeTypes: [String]
+  maxPayloadLength: Int
+  dropPartialPayloads: Boolean
+}
+
+input HttpPayloadCollectionInput {
+  mimeTypes: [String]
+  maxPayloadLength: Int
+  dropPartialPayloads: Boolean
+}
+
+type DbQueryPayloadCollection {
+  maxPayloadLength: Int
+  dropPartialPayloads: Boolean
+}
+
+input DbQueryPayloadCollectionInput {
+  maxPayloadLength: Int
+  dropPartialPayloads: Boolean
+}
+
+type MessagingPayloadCollection {
+  maxPayloadLength: Int
+  dropPartialPayloads: Boolean
+}
+
+input MessagingPayloadCollectionInput {
+  maxPayloadLength: Int
+  dropPartialPayloads: Boolean
+}
+
+type CodeAttributes {
+  column: Boolean
+  filePath: Boolean
+  function: Boolean
+  lineNumber: Boolean
+  namespace: Boolean
+  stacktrace: Boolean
+}
+
+input CodeAttributesInput {
+  column: Boolean
+  filePath: Boolean
+  function: Boolean
+  lineNumber: Boolean
+  namespace: Boolean
+  stacktrace: Boolean
+}
+
+type PayloadCollection {
+  httpRequest: HttpPayloadCollection
+  httpResponse: HttpPayloadCollection
+  dbQuery: DbQueryPayloadCollection
+  messaging: MessagingPayloadCollection
+}
+
+input PayloadCollectionInput {
+  httpRequest: HttpPayloadCollectionInput
+  httpResponse: HttpPayloadCollectionInput
+  dbQuery: DbQueryPayloadCollectionInput
+  messaging: MessagingPayloadCollectionInput
+}
+
+#### CUSTOM PROBES ####
+type CustomInstrumentations {
+  golang: [GolangCustomProbe]
+  java: [JavaCustomProbe]
+}
+
+type GolangCustomProbe {
+  packageName: String
+  functionName: String
+  receiverName: String
+  receiverMethodName: String
+}
+
+type JavaCustomProbe {
+  className: String
+  methodName: String
+}
+
+input CustomInstrumentationsInput {
+  golang: [GolangCustomProbeInput]
+  java: [JavaCustomProbeInput]
+}
+
+input GolangCustomProbeInput {
+  packageName: String
+  functionName: String
+  receiverName: String
+  receiverMethodName: String
+}
+
+input JavaCustomProbeInput {
+  className: String
+  methodName: String
+}
+#### END CUSTOM PROBES ####
+
+extend type Mutation {
+  createInstrumentationRule(
+    instrumentationRule: InstrumentationRuleInput!
+  ): InstrumentationRule!
+  updateInstrumentationRule(
+    ruleId: ID!
+    instrumentationRule: InstrumentationRuleInput!
+  ): InstrumentationRule!
+  deleteInstrumentationRule(ruleId: ID!): Boolean!
+}

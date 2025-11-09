@@ -1,0 +1,202 @@
+"""
+Actions types, inputs and operations split from schema.graphqls.
+"""
+input ActionInput {
+  type: ActionType!
+  name: String
+  notes: String
+  disabled: Boolean!
+  signals: [SignalType!]!
+  fields: ActionFieldsInput!
+}
+
+input ActionFieldsInput {
+  collectContainerAttributes: Boolean
+  collectReplicaSetAttributes: Boolean
+  collectWorkloadId: Boolean
+  collectClusterId: Boolean
+  labelsAttributes: [K8sLabelAttributeInput!]
+  annotationsAttributes: [K8sAnnotationAttributeInput!]
+
+  clusterAttributes: [ClusterAttributeInput!]
+  overwriteExistingValues: Boolean
+  attributeNamesToDelete: [String!]
+  renames: String
+  piiCategories: [String!]
+
+  samplingPercentage: String
+  fallbackSamplingRatio: Int
+  endpointsFilters: [HttpRouteFilterInput!]
+  servicesNameFilters: [ServiceNameFilterInput!]
+  attributeFilters: [SpanAttributeFilterInput!]
+}
+
+input K8sLabelAttributeInput {
+  labelKey: String!
+  attributeKey: String!
+  from: K8sAttributesFrom
+}
+
+input K8sAnnotationAttributeInput {
+  annotationKey: String!
+  attributeKey: String!
+  from: K8sAttributesFrom
+}
+
+input ClusterAttributeInput {
+  attributeName: String!
+  attributeStringValue: String!
+}
+
+input HttpRouteFilterInput {
+  httpRoute: String!
+  serviceName: String!
+  minimumLatencyThreshold: Int!
+  fallbackSamplingRatio: Float!
+}
+
+input ServiceNameFilterInput {
+  serviceName: String!
+  samplingRatio: Float!
+  fallbackSamplingRatio: Float!
+}
+
+input SpanAttributeFilterInput {
+  serviceName: String!
+  attributeKey: String!
+  fallbackSamplingRatio: Float!
+  condition: AttributeFiltersConditionInput!
+}
+
+input StringConditionInput {
+  operation: StringOperation!
+  expectedValue: String
+}
+input NumberConditionInput {
+  operation: NumberOperation!
+  expectedValue: Float!
+}
+input BooleanConditionInput {
+  operation: BooleanOperation!
+  expectedValue: Boolean!
+}
+input JsonConditionInput {
+  operation: JsonOperation!
+  expectedValue: String
+  jsonPath: String
+}
+
+input AttributeFiltersConditionInput {
+  stringCondition: StringConditionInput
+  numberCondition: NumberConditionInput
+  booleanCondition: BooleanConditionInput
+  jsonCondition: JsonConditionInput
+}
+
+type Action {
+  id: ID!
+  type: ActionType!
+  name: String
+  notes: String
+  disabled: Boolean!
+  signals: [SignalType!]!
+  fields: ActionFields!
+  conditions: [Condition!]
+}
+
+type ActionFields {
+  collectContainerAttributes: Boolean
+  collectReplicaSetAttributes: Boolean
+  collectWorkloadId: Boolean
+  collectClusterId: Boolean
+  labelsAttributes: [K8sLabelAttribute!]
+  annotationsAttributes: [K8sAnnotationAttribute!]
+
+  clusterAttributes: [ClusterAttribute!]
+  overwriteExistingValues: Boolean
+  attributeNamesToDelete: [String!]
+  renames: String
+  piiCategories: [String!]
+
+  samplingPercentage: String
+  fallbackSamplingRatio: Int
+  endpointsFilters: [HttpRouteFilter!]
+  servicesNameFilters: [ServiceNameFilter!]
+  attributeFilters: [SpanAttributeFilter!]
+}
+
+type K8sLabelAttribute {
+  labelKey: String!
+  attributeKey: String!
+  from: K8sAttributesFrom
+}
+
+type K8sAnnotationAttribute {
+  annotationKey: String!
+  attributeKey: String!
+  from: K8sAttributesFrom
+}
+
+type ClusterAttribute {
+  attributeName: String!
+  attributeStringValue: String!
+}
+
+type HttpRouteFilter {
+  httpRoute: String!
+  serviceName: String!
+  minimumLatencyThreshold: Int!
+  fallbackSamplingRatio: Float!
+}
+
+type ServiceNameFilter {
+  serviceName: String!
+  samplingRatio: Float!
+  fallbackSamplingRatio: Float!
+}
+
+type SpanAttributeFilter {
+  serviceName: String!
+  attributeKey: String!
+  condition: AttributeFiltersCondition!
+  samplingRatio: Float!
+  fallbackSamplingRatio: Float!
+}
+
+type StringCondition {
+  operation: StringOperation!
+  expectedValue: String
+}
+type NumberCondition {
+  operation: NumberOperation!
+  expectedValue: Float!
+}
+type BooleanCondition {
+  operation: BooleanOperation!
+  expectedValue: Boolean!
+}
+type JsonCondition {
+  operation: JsonOperation!
+  expectedValue: String
+  jsonPath: String
+}
+
+type AttributeFiltersCondition {
+  stringCondition: StringCondition
+  numberCondition: NumberCondition
+  booleanCondition: BooleanCondition
+  jsonCondition: JsonCondition
+}
+
+type AttributeFilters {
+  serviceName: String!
+  attributeKey: String!
+  fallbackSamplingRatio: Float!
+  condition: AttributeFiltersCondition!
+}
+
+extend type Mutation {
+  createAction(action: ActionInput!): Action!
+  updateAction(id: ID!, action: ActionInput!): Action!
+  deleteAction(id: ID!, actionType: String!): Boolean!
+}

@@ -913,45 +913,45 @@ type K8sWorkloadTelemetryMetricsResolver interface {
 	ExpectingTelemetry(ctx context.Context, obj *model.K8sWorkloadTelemetryMetrics) (*model.K8sWorkloadTelemetryMetricsExpectingTelemetryStatus, error)
 }
 type MutationResolver interface {
+	CreateAction(ctx context.Context, action model.ActionInput) (*model.Action, error)
+	UpdateAction(ctx context.Context, id string, action model.ActionInput) (*model.Action, error)
+	DeleteAction(ctx context.Context, id string, actionType string) (bool, error)
 	UpdateAPIToken(ctx context.Context, token string) (bool, error)
 	UpdateOdigosConfig(ctx context.Context, odigosConfig model.OdigosConfigurationInput) (bool, error)
 	UninstrumentCluster(ctx context.Context) (bool, error)
 	PauseOdigos(ctx context.Context) (bool, error)
-	PersistK8sNamespaces(ctx context.Context, namespaces []*model.PersistNamespaceItemInput) (bool, error)
-	PersistK8sSources(ctx context.Context, sources []*model.PersistNamespaceSourceInput) (bool, error)
-	UpdateK8sActualSource(ctx context.Context, sourceID model.K8sSourceID, patchSourceRequest model.PatchSourceRequestInput) (bool, error)
+	DeleteCentralProxy(ctx context.Context) (bool, error)
+	UpdateDataStream(ctx context.Context, id string, dataStream model.DataStreamInput) (*model.DataStream, error)
+	DeleteDataStream(ctx context.Context, id string) (bool, error)
 	CreateNewDestination(ctx context.Context, destination model.DestinationInput) (*model.Destination, error)
 	UpdateDestination(ctx context.Context, id string, destination model.DestinationInput) (*model.Destination, error)
 	DeleteDestination(ctx context.Context, id string, currentStreamName string) (bool, error)
 	TestConnectionForDestination(ctx context.Context, destination model.DestinationInput) (*model.TestConnectionResponse, error)
-	CreateAction(ctx context.Context, action model.ActionInput) (*model.Action, error)
-	UpdateAction(ctx context.Context, id string, action model.ActionInput) (*model.Action, error)
-	DeleteAction(ctx context.Context, id string, actionType string) (bool, error)
 	CreateInstrumentationRule(ctx context.Context, instrumentationRule model.InstrumentationRuleInput) (*model.InstrumentationRule, error)
 	UpdateInstrumentationRule(ctx context.Context, ruleID string, instrumentationRule model.InstrumentationRuleInput) (*model.InstrumentationRule, error)
 	DeleteInstrumentationRule(ctx context.Context, ruleID string) (bool, error)
-	UpdateDataStream(ctx context.Context, id string, dataStream model.DataStreamInput) (*model.DataStream, error)
-	DeleteDataStream(ctx context.Context, id string) (bool, error)
+	PersistK8sNamespaces(ctx context.Context, namespaces []*model.PersistNamespaceItemInput) (bool, error)
+	PersistK8sSources(ctx context.Context, sources []*model.PersistNamespaceSourceInput) (bool, error)
+	UpdateK8sActualSource(ctx context.Context, sourceID model.K8sSourceID, patchSourceRequest model.PatchSourceRequestInput) (bool, error)
 	RestartWorkloads(ctx context.Context, sourceIds []*model.K8sSourceID) (bool, error)
-	DeleteCentralProxy(ctx context.Context) (bool, error)
 }
 type QueryResolver interface {
-	ComputePlatform(ctx context.Context) (*model.ComputePlatform, error)
-	Config(ctx context.Context) (*model.GetConfigResponse, error)
-	OdigosConfig(ctx context.Context) (*model.OdigosConfiguration, error)
-	DestinationCategories(ctx context.Context) (*model.GetDestinationCategories, error)
-	PotentialDestinations(ctx context.Context) ([]*model.DestinationDetails, error)
-	GetOverviewMetrics(ctx context.Context) (*model.OverviewMetricsResponse, error)
-	GetServiceMap(ctx context.Context) (*model.ServiceMap, error)
 	DescribeOdigos(ctx context.Context) (*model.OdigosAnalyze, error)
 	DescribeSource(ctx context.Context, namespace string, kind string, name string) (*model.SourceAnalyze, error)
 	SourceConditions(ctx context.Context) ([]*model.SourceConditions, error)
 	InstrumentationInstanceComponents(ctx context.Context, namespace string, kind string, name string) ([]*model.InstrumentationInstanceComponent, error)
-	Workloads(ctx context.Context, filter *model.WorkloadFilter) ([]*model.K8sWorkload, error)
 	GatewayDeploymentInfo(ctx context.Context) (*model.GatewayDeploymentInfo, error)
 	OdigletDaemonSetInfo(ctx context.Context) (*model.CollectorDaemonSetInfo, error)
 	GatewayPods(ctx context.Context) ([]*model.PodInfo, error)
 	OdigletPods(ctx context.Context) ([]*model.PodInfo, error)
+	ComputePlatform(ctx context.Context) (*model.ComputePlatform, error)
+	OdigosConfig(ctx context.Context) (*model.OdigosConfiguration, error)
+	Config(ctx context.Context) (*model.GetConfigResponse, error)
+	DestinationCategories(ctx context.Context) (*model.GetDestinationCategories, error)
+	PotentialDestinations(ctx context.Context) ([]*model.DestinationDetails, error)
+	GetOverviewMetrics(ctx context.Context) (*model.OverviewMetricsResponse, error)
+	GetServiceMap(ctx context.Context) (*model.ServiceMap, error)
+	Workloads(ctx context.Context, filter *model.WorkloadFilter) ([]*model.K8sWorkload, error)
 }
 
 type executableSchema struct {
@@ -4783,7 +4783,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 	return introspection.WrapTypeFromDef(ec.Schema(), ec.Schema().Types[name]), nil
 }
 
-//go:embed "collectors.graphqls" "enum.graphqls" "schema.graphqls" "workload.graphqls"
+//go:embed "actions.graphqls" "analyze.graphqls" "collectors.graphqls" "compute_platform.graphqls" "configuration.graphqls" "datastreams.graphqls" "destination_types.graphqls" "destinations.graphqls" "enum.graphqls" "instrumentation_rules.graphqls" "k8s_actual.graphqls" "metrics.graphqls" "schema.graphqls" "servicemap.graphqls" "workload.graphqls"
 var sourcesFS embed.FS
 
 func sourceData(filename string) string {
@@ -4795,9 +4795,20 @@ func sourceData(filename string) string {
 }
 
 var sources = []*ast.Source{
+	{Name: "actions.graphqls", Input: sourceData("actions.graphqls"), BuiltIn: false},
+	{Name: "analyze.graphqls", Input: sourceData("analyze.graphqls"), BuiltIn: false},
 	{Name: "collectors.graphqls", Input: sourceData("collectors.graphqls"), BuiltIn: false},
+	{Name: "compute_platform.graphqls", Input: sourceData("compute_platform.graphqls"), BuiltIn: false},
+	{Name: "configuration.graphqls", Input: sourceData("configuration.graphqls"), BuiltIn: false},
+	{Name: "datastreams.graphqls", Input: sourceData("datastreams.graphqls"), BuiltIn: false},
+	{Name: "destination_types.graphqls", Input: sourceData("destination_types.graphqls"), BuiltIn: false},
+	{Name: "destinations.graphqls", Input: sourceData("destinations.graphqls"), BuiltIn: false},
 	{Name: "enum.graphqls", Input: sourceData("enum.graphqls"), BuiltIn: false},
+	{Name: "instrumentation_rules.graphqls", Input: sourceData("instrumentation_rules.graphqls"), BuiltIn: false},
+	{Name: "k8s_actual.graphqls", Input: sourceData("k8s_actual.graphqls"), BuiltIn: false},
+	{Name: "metrics.graphqls", Input: sourceData("metrics.graphqls"), BuiltIn: false},
 	{Name: "schema.graphqls", Input: sourceData("schema.graphqls"), BuiltIn: false},
+	{Name: "servicemap.graphqls", Input: sourceData("servicemap.graphqls"), BuiltIn: false},
 	{Name: "workload.graphqls", Input: sourceData("workload.graphqls"), BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -21183,6 +21194,207 @@ func (ec *executionContext) fieldContext_MessagingPayloadCollection_dropPartialP
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_createAction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createAction(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateAction(rctx, fc.Args["action"].(model.ActionInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Action)
+	fc.Result = res
+	return ec.marshalNAction2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐAction(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createAction(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Action_id(ctx, field)
+			case "type":
+				return ec.fieldContext_Action_type(ctx, field)
+			case "name":
+				return ec.fieldContext_Action_name(ctx, field)
+			case "notes":
+				return ec.fieldContext_Action_notes(ctx, field)
+			case "disabled":
+				return ec.fieldContext_Action_disabled(ctx, field)
+			case "signals":
+				return ec.fieldContext_Action_signals(ctx, field)
+			case "fields":
+				return ec.fieldContext_Action_fields(ctx, field)
+			case "conditions":
+				return ec.fieldContext_Action_conditions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Action", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createAction_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateAction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateAction(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateAction(rctx, fc.Args["id"].(string), fc.Args["action"].(model.ActionInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Action)
+	fc.Result = res
+	return ec.marshalNAction2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐAction(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateAction(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Action_id(ctx, field)
+			case "type":
+				return ec.fieldContext_Action_type(ctx, field)
+			case "name":
+				return ec.fieldContext_Action_name(ctx, field)
+			case "notes":
+				return ec.fieldContext_Action_notes(ctx, field)
+			case "disabled":
+				return ec.fieldContext_Action_disabled(ctx, field)
+			case "signals":
+				return ec.fieldContext_Action_signals(ctx, field)
+			case "fields":
+				return ec.fieldContext_Action_fields(ctx, field)
+			case "conditions":
+				return ec.fieldContext_Action_conditions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Action", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateAction_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteAction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteAction(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteAction(rctx, fc.Args["id"].(string), fc.Args["actionType"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteAction(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteAction_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_updateApiToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_updateApiToken(ctx, field)
 	if err != nil {
@@ -21381,8 +21593,8 @@ func (ec *executionContext) fieldContext_Mutation_pauseOdigos(_ context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_persistK8sNamespaces(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_persistK8sNamespaces(ctx, field)
+func (ec *executionContext) _Mutation_deleteCentralProxy(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteCentralProxy(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -21395,7 +21607,7 @@ func (ec *executionContext) _Mutation_persistK8sNamespaces(ctx context.Context, 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().PersistK8sNamespaces(rctx, fc.Args["namespaces"].([]*model.PersistNamespaceItemInput))
+		return ec.resolvers.Mutation().DeleteCentralProxy(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -21412,7 +21624,7 @@ func (ec *executionContext) _Mutation_persistK8sNamespaces(ctx context.Context, 
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_persistK8sNamespaces(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_deleteCentralProxy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -21422,6 +21634,54 @@ func (ec *executionContext) fieldContext_Mutation_persistK8sNamespaces(ctx conte
 			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateDataStream(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateDataStream(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateDataStream(rctx, fc.Args["id"].(string), fc.Args["dataStream"].(model.DataStreamInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.DataStream)
+	fc.Result = res
+	return ec.marshalNDataStream2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐDataStream(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateDataStream(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_DataStream_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DataStream", field.Name)
+		},
+	}
 	defer func() {
 		if r := recover(); r != nil {
 			err = ec.Recover(ctx, r)
@@ -21429,15 +21689,15 @@ func (ec *executionContext) fieldContext_Mutation_persistK8sNamespaces(ctx conte
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_persistK8sNamespaces_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_updateDataStream_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_persistK8sSources(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_persistK8sSources(ctx, field)
+func (ec *executionContext) _Mutation_deleteDataStream(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteDataStream(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -21450,7 +21710,7 @@ func (ec *executionContext) _Mutation_persistK8sSources(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().PersistK8sSources(rctx, fc.Args["sources"].([]*model.PersistNamespaceSourceInput))
+		return ec.resolvers.Mutation().DeleteDataStream(rctx, fc.Args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -21467,7 +21727,7 @@ func (ec *executionContext) _Mutation_persistK8sSources(ctx context.Context, fie
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_persistK8sSources(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_deleteDataStream(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -21484,62 +21744,7 @@ func (ec *executionContext) fieldContext_Mutation_persistK8sSources(ctx context.
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_persistK8sSources_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_updateK8sActualSource(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_updateK8sActualSource(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateK8sActualSource(rctx, fc.Args["sourceId"].(model.K8sSourceID), fc.Args["patchSourceRequest"].(model.PatchSourceRequestInput))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_updateK8sActualSource(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_updateK8sActualSource_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_deleteDataStream_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -21818,207 +22023,6 @@ func (ec *executionContext) fieldContext_Mutation_testConnectionForDestination(c
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_createAction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_createAction(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateAction(rctx, fc.Args["action"].(model.ActionInput))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Action)
-	fc.Result = res
-	return ec.marshalNAction2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐAction(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_createAction(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Action_id(ctx, field)
-			case "type":
-				return ec.fieldContext_Action_type(ctx, field)
-			case "name":
-				return ec.fieldContext_Action_name(ctx, field)
-			case "notes":
-				return ec.fieldContext_Action_notes(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Action_disabled(ctx, field)
-			case "signals":
-				return ec.fieldContext_Action_signals(ctx, field)
-			case "fields":
-				return ec.fieldContext_Action_fields(ctx, field)
-			case "conditions":
-				return ec.fieldContext_Action_conditions(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Action", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_createAction_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_updateAction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_updateAction(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateAction(rctx, fc.Args["id"].(string), fc.Args["action"].(model.ActionInput))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Action)
-	fc.Result = res
-	return ec.marshalNAction2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐAction(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_updateAction(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Action_id(ctx, field)
-			case "type":
-				return ec.fieldContext_Action_type(ctx, field)
-			case "name":
-				return ec.fieldContext_Action_name(ctx, field)
-			case "notes":
-				return ec.fieldContext_Action_notes(ctx, field)
-			case "disabled":
-				return ec.fieldContext_Action_disabled(ctx, field)
-			case "signals":
-				return ec.fieldContext_Action_signals(ctx, field)
-			case "fields":
-				return ec.fieldContext_Action_fields(ctx, field)
-			case "conditions":
-				return ec.fieldContext_Action_conditions(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Action", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_updateAction_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_deleteAction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_deleteAction(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().DeleteAction(rctx, fc.Args["id"].(string), fc.Args["actionType"].(string))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_deleteAction(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_deleteAction_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_createInstrumentationRule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_createInstrumentationRule(ctx, field)
 	if err != nil {
@@ -22244,8 +22248,8 @@ func (ec *executionContext) fieldContext_Mutation_deleteInstrumentationRule(ctx 
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_updateDataStream(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_updateDataStream(ctx, field)
+func (ec *executionContext) _Mutation_persistK8sNamespaces(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_persistK8sNamespaces(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -22258,66 +22262,7 @@ func (ec *executionContext) _Mutation_updateDataStream(ctx context.Context, fiel
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateDataStream(rctx, fc.Args["id"].(string), fc.Args["dataStream"].(model.DataStreamInput))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.DataStream)
-	fc.Result = res
-	return ec.marshalNDataStream2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐDataStream(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_updateDataStream(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "name":
-				return ec.fieldContext_DataStream_name(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type DataStream", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_updateDataStream_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_deleteDataStream(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_deleteDataStream(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().DeleteDataStream(rctx, fc.Args["id"].(string))
+		return ec.resolvers.Mutation().PersistK8sNamespaces(rctx, fc.Args["namespaces"].([]*model.PersistNamespaceItemInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -22334,7 +22279,7 @@ func (ec *executionContext) _Mutation_deleteDataStream(ctx context.Context, fiel
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_deleteDataStream(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_persistK8sNamespaces(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -22351,7 +22296,117 @@ func (ec *executionContext) fieldContext_Mutation_deleteDataStream(ctx context.C
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_deleteDataStream_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_persistK8sNamespaces_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_persistK8sSources(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_persistK8sSources(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PersistK8sSources(rctx, fc.Args["sources"].([]*model.PersistNamespaceSourceInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_persistK8sSources(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_persistK8sSources_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateK8sActualSource(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateK8sActualSource(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateK8sActualSource(rctx, fc.Args["sourceId"].(model.K8sSourceID), fc.Args["patchSourceRequest"].(model.PatchSourceRequestInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateK8sActualSource(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateK8sActualSource_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -22409,50 +22464,6 @@ func (ec *executionContext) fieldContext_Mutation_restartWorkloads(ctx context.C
 	if fc.Args, err = ec.field_Mutation_restartWorkloads_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_deleteCentralProxy(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_deleteCentralProxy(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().DeleteCentralProxy(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_deleteCentralProxy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
 	}
 	return fc, nil
 }
@@ -26330,400 +26341,6 @@ func (ec *executionContext) fieldContext_PodWorkload_kind(_ context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_computePlatform(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_computePlatform(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().ComputePlatform(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.ComputePlatform)
-	fc.Result = res
-	return ec.marshalOComputePlatform2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐComputePlatform(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_computePlatform(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "computePlatformType":
-				return ec.fieldContext_ComputePlatform_computePlatformType(ctx, field)
-			case "apiTokens":
-				return ec.fieldContext_ComputePlatform_apiTokens(ctx, field)
-			case "k8sActualNamespaces":
-				return ec.fieldContext_ComputePlatform_k8sActualNamespaces(ctx, field)
-			case "k8sActualNamespace":
-				return ec.fieldContext_ComputePlatform_k8sActualNamespace(ctx, field)
-			case "sources":
-				return ec.fieldContext_ComputePlatform_sources(ctx, field)
-			case "source":
-				return ec.fieldContext_ComputePlatform_source(ctx, field)
-			case "destinations":
-				return ec.fieldContext_ComputePlatform_destinations(ctx, field)
-			case "actions":
-				return ec.fieldContext_ComputePlatform_actions(ctx, field)
-			case "instrumentationRules":
-				return ec.fieldContext_ComputePlatform_instrumentationRules(ctx, field)
-			case "dataStreams":
-				return ec.fieldContext_ComputePlatform_dataStreams(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type ComputePlatform", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_config(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_config(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Config(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.GetConfigResponse)
-	fc.Result = res
-	return ec.marshalOGetConfigResponse2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐGetConfigResponse(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_config(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "readonly":
-				return ec.fieldContext_GetConfigResponse_readonly(ctx, field)
-			case "tier":
-				return ec.fieldContext_GetConfigResponse_tier(ctx, field)
-			case "installationMethod":
-				return ec.fieldContext_GetConfigResponse_installationMethod(ctx, field)
-			case "installationStatus":
-				return ec.fieldContext_GetConfigResponse_installationStatus(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type GetConfigResponse", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_odigosConfig(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_odigosConfig(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().OdigosConfig(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.OdigosConfiguration)
-	fc.Result = res
-	return ec.marshalOOdigosConfiguration2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐOdigosConfiguration(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_odigosConfig(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "karpenterEnabled":
-				return ec.fieldContext_OdigosConfiguration_karpenterEnabled(ctx, field)
-			case "allowConcurrentAgents":
-				return ec.fieldContext_OdigosConfiguration_allowConcurrentAgents(ctx, field)
-			case "uiPaginationLimit":
-				return ec.fieldContext_OdigosConfiguration_uiPaginationLimit(ctx, field)
-			case "centralBackendURL":
-				return ec.fieldContext_OdigosConfiguration_centralBackendURL(ctx, field)
-			case "oidc":
-				return ec.fieldContext_OdigosConfiguration_oidc(ctx, field)
-			case "clusterName":
-				return ec.fieldContext_OdigosConfiguration_clusterName(ctx, field)
-			case "imagePrefix":
-				return ec.fieldContext_OdigosConfiguration_imagePrefix(ctx, field)
-			case "ignoredNamespaces":
-				return ec.fieldContext_OdigosConfiguration_ignoredNamespaces(ctx, field)
-			case "ignoredContainers":
-				return ec.fieldContext_OdigosConfiguration_ignoredContainers(ctx, field)
-			case "profiles":
-				return ec.fieldContext_OdigosConfiguration_profiles(ctx, field)
-			case "mountMethod":
-				return ec.fieldContext_OdigosConfiguration_mountMethod(ctx, field)
-			case "agentEnvVarsInjectionMethod":
-				return ec.fieldContext_OdigosConfiguration_agentEnvVarsInjectionMethod(ctx, field)
-			case "customContainerRuntimeSocketPath":
-				return ec.fieldContext_OdigosConfiguration_customContainerRuntimeSocketPath(ctx, field)
-			case "odigletHealthProbeBindPort":
-				return ec.fieldContext_OdigosConfiguration_odigletHealthProbeBindPort(ctx, field)
-			case "rollbackDisabled":
-				return ec.fieldContext_OdigosConfiguration_rollbackDisabled(ctx, field)
-			case "rollbackGraceTime":
-				return ec.fieldContext_OdigosConfiguration_rollbackGraceTime(ctx, field)
-			case "rollbackStabilityWindow":
-				return ec.fieldContext_OdigosConfiguration_rollbackStabilityWindow(ctx, field)
-			case "rollout":
-				return ec.fieldContext_OdigosConfiguration_rollout(ctx, field)
-			case "collectorNode":
-				return ec.fieldContext_OdigosConfiguration_collectorNode(ctx, field)
-			case "collectorGateway":
-				return ec.fieldContext_OdigosConfiguration_collectorGateway(ctx, field)
-			case "nodeSelector":
-				return ec.fieldContext_OdigosConfiguration_nodeSelector(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type OdigosConfiguration", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_destinationCategories(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_destinationCategories(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().DestinationCategories(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.GetDestinationCategories)
-	fc.Result = res
-	return ec.marshalOGetDestinationCategories2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐGetDestinationCategories(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_destinationCategories(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "categories":
-				return ec.fieldContext_GetDestinationCategories_categories(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type GetDestinationCategories", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_potentialDestinations(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_potentialDestinations(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().PotentialDestinations(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.DestinationDetails)
-	fc.Result = res
-	return ec.marshalNDestinationDetails2ᚕᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐDestinationDetailsᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_potentialDestinations(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "type":
-				return ec.fieldContext_DestinationDetails_type(ctx, field)
-			case "urlString":
-				return ec.fieldContext_DestinationDetails_urlString(ctx, field)
-			case "fields":
-				return ec.fieldContext_DestinationDetails_fields(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type DestinationDetails", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_getOverviewMetrics(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_getOverviewMetrics(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().GetOverviewMetrics(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.OverviewMetricsResponse)
-	fc.Result = res
-	return ec.marshalNOverviewMetricsResponse2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐOverviewMetricsResponse(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_getOverviewMetrics(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "sources":
-				return ec.fieldContext_OverviewMetricsResponse_sources(ctx, field)
-			case "destinations":
-				return ec.fieldContext_OverviewMetricsResponse_destinations(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type OverviewMetricsResponse", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_getServiceMap(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_getServiceMap(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().GetServiceMap(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.ServiceMap)
-	fc.Result = res
-	return ec.marshalNServiceMap2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐServiceMap(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_getServiceMap(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "services":
-				return ec.fieldContext_ServiceMap_services(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type ServiceMap", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Query_describeOdigos(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_describeOdigos(ctx, field)
 	if err != nil {
@@ -26980,93 +26597,6 @@ func (ec *executionContext) fieldContext_Query_instrumentationInstanceComponents
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_workloads(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_workloads(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Workloads(rctx, fc.Args["filter"].(*model.WorkloadFilter))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.K8sWorkload)
-	fc.Result = res
-	return ec.marshalNK8sWorkload2ᚕᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐK8sWorkloadᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_workloads(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_K8sWorkload_id(ctx, field)
-			case "serviceName":
-				return ec.fieldContext_K8sWorkload_serviceName(ctx, field)
-			case "workloadOdigosHealthStatus":
-				return ec.fieldContext_K8sWorkload_workloadOdigosHealthStatus(ctx, field)
-			case "conditions":
-				return ec.fieldContext_K8sWorkload_conditions(ctx, field)
-			case "markedForInstrumentation":
-				return ec.fieldContext_K8sWorkload_markedForInstrumentation(ctx, field)
-			case "runtimeInfo":
-				return ec.fieldContext_K8sWorkload_runtimeInfo(ctx, field)
-			case "agentEnabled":
-				return ec.fieldContext_K8sWorkload_agentEnabled(ctx, field)
-			case "rollout":
-				return ec.fieldContext_K8sWorkload_rollout(ctx, field)
-			case "containers":
-				return ec.fieldContext_K8sWorkload_containers(ctx, field)
-			case "pods":
-				return ec.fieldContext_K8sWorkload_pods(ctx, field)
-			case "podsAgentInjectionStatus":
-				return ec.fieldContext_K8sWorkload_podsAgentInjectionStatus(ctx, field)
-			case "podsHealthStatus":
-				return ec.fieldContext_K8sWorkload_podsHealthStatus(ctx, field)
-			case "workloadHealthStatus":
-				return ec.fieldContext_K8sWorkload_workloadHealthStatus(ctx, field)
-			case "processesHealthStatus":
-				return ec.fieldContext_K8sWorkload_processesHealthStatus(ctx, field)
-			case "telemetryMetrics":
-				return ec.fieldContext_K8sWorkload_telemetryMetrics(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type K8sWorkload", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_workloads_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Query_gatewayDeploymentInfo(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_gatewayDeploymentInfo(ctx, field)
 	if err != nil {
@@ -27299,6 +26829,487 @@ func (ec *executionContext) fieldContext_Query_odigletPods(_ context.Context, fi
 			}
 			return nil, fmt.Errorf("no field named %q was found under type PodInfo", field.Name)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_computePlatform(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_computePlatform(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ComputePlatform(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.ComputePlatform)
+	fc.Result = res
+	return ec.marshalOComputePlatform2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐComputePlatform(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_computePlatform(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "computePlatformType":
+				return ec.fieldContext_ComputePlatform_computePlatformType(ctx, field)
+			case "apiTokens":
+				return ec.fieldContext_ComputePlatform_apiTokens(ctx, field)
+			case "k8sActualNamespaces":
+				return ec.fieldContext_ComputePlatform_k8sActualNamespaces(ctx, field)
+			case "k8sActualNamespace":
+				return ec.fieldContext_ComputePlatform_k8sActualNamespace(ctx, field)
+			case "sources":
+				return ec.fieldContext_ComputePlatform_sources(ctx, field)
+			case "source":
+				return ec.fieldContext_ComputePlatform_source(ctx, field)
+			case "destinations":
+				return ec.fieldContext_ComputePlatform_destinations(ctx, field)
+			case "actions":
+				return ec.fieldContext_ComputePlatform_actions(ctx, field)
+			case "instrumentationRules":
+				return ec.fieldContext_ComputePlatform_instrumentationRules(ctx, field)
+			case "dataStreams":
+				return ec.fieldContext_ComputePlatform_dataStreams(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ComputePlatform", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_odigosConfig(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_odigosConfig(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().OdigosConfig(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.OdigosConfiguration)
+	fc.Result = res
+	return ec.marshalOOdigosConfiguration2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐOdigosConfiguration(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_odigosConfig(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "karpenterEnabled":
+				return ec.fieldContext_OdigosConfiguration_karpenterEnabled(ctx, field)
+			case "allowConcurrentAgents":
+				return ec.fieldContext_OdigosConfiguration_allowConcurrentAgents(ctx, field)
+			case "uiPaginationLimit":
+				return ec.fieldContext_OdigosConfiguration_uiPaginationLimit(ctx, field)
+			case "centralBackendURL":
+				return ec.fieldContext_OdigosConfiguration_centralBackendURL(ctx, field)
+			case "oidc":
+				return ec.fieldContext_OdigosConfiguration_oidc(ctx, field)
+			case "clusterName":
+				return ec.fieldContext_OdigosConfiguration_clusterName(ctx, field)
+			case "imagePrefix":
+				return ec.fieldContext_OdigosConfiguration_imagePrefix(ctx, field)
+			case "ignoredNamespaces":
+				return ec.fieldContext_OdigosConfiguration_ignoredNamespaces(ctx, field)
+			case "ignoredContainers":
+				return ec.fieldContext_OdigosConfiguration_ignoredContainers(ctx, field)
+			case "profiles":
+				return ec.fieldContext_OdigosConfiguration_profiles(ctx, field)
+			case "mountMethod":
+				return ec.fieldContext_OdigosConfiguration_mountMethod(ctx, field)
+			case "agentEnvVarsInjectionMethod":
+				return ec.fieldContext_OdigosConfiguration_agentEnvVarsInjectionMethod(ctx, field)
+			case "customContainerRuntimeSocketPath":
+				return ec.fieldContext_OdigosConfiguration_customContainerRuntimeSocketPath(ctx, field)
+			case "odigletHealthProbeBindPort":
+				return ec.fieldContext_OdigosConfiguration_odigletHealthProbeBindPort(ctx, field)
+			case "rollbackDisabled":
+				return ec.fieldContext_OdigosConfiguration_rollbackDisabled(ctx, field)
+			case "rollbackGraceTime":
+				return ec.fieldContext_OdigosConfiguration_rollbackGraceTime(ctx, field)
+			case "rollbackStabilityWindow":
+				return ec.fieldContext_OdigosConfiguration_rollbackStabilityWindow(ctx, field)
+			case "rollout":
+				return ec.fieldContext_OdigosConfiguration_rollout(ctx, field)
+			case "collectorNode":
+				return ec.fieldContext_OdigosConfiguration_collectorNode(ctx, field)
+			case "collectorGateway":
+				return ec.fieldContext_OdigosConfiguration_collectorGateway(ctx, field)
+			case "nodeSelector":
+				return ec.fieldContext_OdigosConfiguration_nodeSelector(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type OdigosConfiguration", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_config(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_config(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Config(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.GetConfigResponse)
+	fc.Result = res
+	return ec.marshalOGetConfigResponse2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐGetConfigResponse(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_config(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "readonly":
+				return ec.fieldContext_GetConfigResponse_readonly(ctx, field)
+			case "tier":
+				return ec.fieldContext_GetConfigResponse_tier(ctx, field)
+			case "installationMethod":
+				return ec.fieldContext_GetConfigResponse_installationMethod(ctx, field)
+			case "installationStatus":
+				return ec.fieldContext_GetConfigResponse_installationStatus(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GetConfigResponse", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_destinationCategories(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_destinationCategories(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().DestinationCategories(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.GetDestinationCategories)
+	fc.Result = res
+	return ec.marshalOGetDestinationCategories2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐGetDestinationCategories(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_destinationCategories(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "categories":
+				return ec.fieldContext_GetDestinationCategories_categories(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GetDestinationCategories", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_potentialDestinations(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_potentialDestinations(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PotentialDestinations(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.DestinationDetails)
+	fc.Result = res
+	return ec.marshalNDestinationDetails2ᚕᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐDestinationDetailsᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_potentialDestinations(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "type":
+				return ec.fieldContext_DestinationDetails_type(ctx, field)
+			case "urlString":
+				return ec.fieldContext_DestinationDetails_urlString(ctx, field)
+			case "fields":
+				return ec.fieldContext_DestinationDetails_fields(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DestinationDetails", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_getOverviewMetrics(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getOverviewMetrics(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().GetOverviewMetrics(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.OverviewMetricsResponse)
+	fc.Result = res
+	return ec.marshalNOverviewMetricsResponse2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐOverviewMetricsResponse(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_getOverviewMetrics(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "sources":
+				return ec.fieldContext_OverviewMetricsResponse_sources(ctx, field)
+			case "destinations":
+				return ec.fieldContext_OverviewMetricsResponse_destinations(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type OverviewMetricsResponse", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_getServiceMap(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getServiceMap(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().GetServiceMap(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.ServiceMap)
+	fc.Result = res
+	return ec.marshalNServiceMap2ᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐServiceMap(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_getServiceMap(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "services":
+				return ec.fieldContext_ServiceMap_services(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ServiceMap", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_workloads(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_workloads(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Workloads(rctx, fc.Args["filter"].(*model.WorkloadFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.K8sWorkload)
+	fc.Result = res
+	return ec.marshalNK8sWorkload2ᚕᚖgithubᚗcomᚋodigosᚑioᚋodigosᚋfrontendᚋgraphᚋmodelᚐK8sWorkloadᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_workloads(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_K8sWorkload_id(ctx, field)
+			case "serviceName":
+				return ec.fieldContext_K8sWorkload_serviceName(ctx, field)
+			case "workloadOdigosHealthStatus":
+				return ec.fieldContext_K8sWorkload_workloadOdigosHealthStatus(ctx, field)
+			case "conditions":
+				return ec.fieldContext_K8sWorkload_conditions(ctx, field)
+			case "markedForInstrumentation":
+				return ec.fieldContext_K8sWorkload_markedForInstrumentation(ctx, field)
+			case "runtimeInfo":
+				return ec.fieldContext_K8sWorkload_runtimeInfo(ctx, field)
+			case "agentEnabled":
+				return ec.fieldContext_K8sWorkload_agentEnabled(ctx, field)
+			case "rollout":
+				return ec.fieldContext_K8sWorkload_rollout(ctx, field)
+			case "containers":
+				return ec.fieldContext_K8sWorkload_containers(ctx, field)
+			case "pods":
+				return ec.fieldContext_K8sWorkload_pods(ctx, field)
+			case "podsAgentInjectionStatus":
+				return ec.fieldContext_K8sWorkload_podsAgentInjectionStatus(ctx, field)
+			case "podsHealthStatus":
+				return ec.fieldContext_K8sWorkload_podsHealthStatus(ctx, field)
+			case "workloadHealthStatus":
+				return ec.fieldContext_K8sWorkload_workloadHealthStatus(ctx, field)
+			case "processesHealthStatus":
+				return ec.fieldContext_K8sWorkload_processesHealthStatus(ctx, field)
+			case "telemetryMetrics":
+				return ec.fieldContext_K8sWorkload_telemetryMetrics(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type K8sWorkload", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_workloads_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -38553,6 +38564,27 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "createAction":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createAction(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateAction":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateAction(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteAction":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteAction(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "updateApiToken":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateApiToken(ctx, field)
@@ -38581,23 +38613,23 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "persistK8sNamespaces":
+		case "deleteCentralProxy":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_persistK8sNamespaces(ctx, field)
+				return ec._Mutation_deleteCentralProxy(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "persistK8sSources":
+		case "updateDataStream":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_persistK8sSources(ctx, field)
+				return ec._Mutation_updateDataStream(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "updateK8sActualSource":
+		case "deleteDataStream":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_updateK8sActualSource(ctx, field)
+				return ec._Mutation_deleteDataStream(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -38630,27 +38662,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "createAction":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_createAction(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "updateAction":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_updateAction(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "deleteAction":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_deleteAction(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "createInstrumentationRule":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createInstrumentationRule(ctx, field)
@@ -38672,16 +38683,23 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "updateDataStream":
+		case "persistK8sNamespaces":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_updateDataStream(ctx, field)
+				return ec._Mutation_persistK8sNamespaces(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "deleteDataStream":
+		case "persistK8sSources":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_deleteDataStream(ctx, field)
+				return ec._Mutation_persistK8sSources(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateK8sActualSource":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateK8sActualSource(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -38689,13 +38707,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "restartWorkloads":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_restartWorkloads(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "deleteCentralProxy":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_deleteCentralProxy(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -39540,6 +39551,182 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "describeOdigos":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_describeOdigos(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "describeSource":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_describeSource(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "sourceConditions":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_sourceConditions(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "instrumentationInstanceComponents":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_instrumentationInstanceComponents(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "gatewayDeploymentInfo":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_gatewayDeploymentInfo(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "odigletDaemonSetInfo":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_odigletDaemonSetInfo(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "gatewayPods":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_gatewayPods(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "odigletPods":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_odigletPods(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "computePlatform":
 			field := field
 
@@ -39559,25 +39746,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "config":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_config(ctx, field)
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "odigosConfig":
 			field := field
 
@@ -39588,6 +39756,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_odigosConfig(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "config":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_config(ctx, field)
 				return res
 			}
 
@@ -39682,94 +39869,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "describeOdigos":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_describeOdigos(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "describeSource":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_describeSource(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "sourceConditions":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_sourceConditions(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "instrumentationInstanceComponents":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_instrumentationInstanceComponents(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "workloads":
 			field := field
 
@@ -39780,94 +39879,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_workloads(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "gatewayDeploymentInfo":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_gatewayDeploymentInfo(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "odigletDaemonSetInfo":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_odigletDaemonSetInfo(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "gatewayPods":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_gatewayPods(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "odigletPods":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_odigletPods(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
