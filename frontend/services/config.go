@@ -75,6 +75,22 @@ func IsReadonlyMode(ctx context.Context) bool {
 	return odigosConfiguration.UiMode == common.UiModeReadonly
 }
 
+// GetClusterName returns the clusterName from the odigos-configuration ConfigMap (config.yaml)
+func GetClusterName(ctx context.Context) string {
+	ns := env.GetCurrentNamespace()
+	cm, err := kube.DefaultClient.CoreV1().ConfigMaps(ns).Get(ctx, consts.OdigosConfigurationName, metav1.GetOptions{})
+	if err != nil {
+		log.Printf("Error getting odigos-configuration: %v\n", err)
+		return ""
+	}
+	var cfg common.OdigosConfiguration
+	if err := yaml.Unmarshal([]byte(cm.Data[consts.OdigosConfigurationFileName]), &cfg); err != nil {
+		log.Printf("Error parsing odigos-configuration YAML: %v\n", err)
+		return ""
+	}
+	return cfg.ClusterName
+}
+
 func isSourceCreated(ctx context.Context) bool {
 	ns := env.GetCurrentNamespace()
 

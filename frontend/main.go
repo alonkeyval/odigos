@@ -157,6 +157,8 @@ func startHTTPServer(ctx context.Context, flags *Flags, logger logr.Logger, odig
 		r.Use(gin.Recovery())
 	}
 
+	clusterName := services.GetClusterName(ctx)
+
 	// Enable CORS
 	r.Use(cors.Default())
 
@@ -196,7 +198,7 @@ func startHTTPServer(ctx context.Context, flags *Flags, logger logr.Logger, odig
 	gqlExecutor := executor.New(gqlExecutableSchema)
 
 	// GraphQL handlers
-	r.POST("/graphql", func(c *gin.Context) {
+	r.POST("/graphql", middlewares.AdminTokenMiddleware(clusterName), func(c *gin.Context) {
 		loader := loaders.NewLoaders(logger, k8sCacheClient)
 		baseCtx := c.Request.Context()
 		if c.GetHeader(middlewares.AdminOverrideHeader) == "true" {
