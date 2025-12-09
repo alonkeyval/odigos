@@ -22,6 +22,7 @@ import (
 	"github.com/odigos-io/odigos/k8sutils/pkg/env"
 	"github.com/odigos-io/odigos/k8sutils/pkg/feature"
 	"golang.org/x/sync/errgroup"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/client-go/util/retry"
@@ -278,4 +279,26 @@ func ExtractImageVersion(image string) string {
 	}
 
 	return ""
+}
+
+func MapPodPhase(p corev1.PodPhase) *model.PodPhase {
+	switch p {
+	case corev1.PodPending:
+		v := model.PodPhasePending
+		return &v
+	case corev1.PodRunning:
+		v := model.PodPhaseRunning
+		return &v
+	case corev1.PodSucceeded:
+		v := model.PodPhaseSucceeded
+		return &v
+	case corev1.PodFailed:
+		v := model.PodPhaseFailed
+		return &v
+	case corev1.PodUnknown:
+		fallthrough
+	default:
+		v := model.PodPhaseUnknown
+		return &v
+	}
 }

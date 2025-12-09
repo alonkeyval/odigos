@@ -8,10 +8,19 @@ import (
 	"github.com/odigos-io/odigos/frontend/graph/model"
 	"github.com/odigos-io/odigos/frontend/kube"
 	"github.com/odigos-io/odigos/frontend/services"
+	containerutils "github.com/odigos-io/odigos/k8sutils/pkg/container"
 	"github.com/odigos-io/odigos/k8sutils/pkg/containers"
 	"github.com/odigos-io/odigos/k8sutils/pkg/env"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// Container waiting reasons that indicate a failure state
+const (
+	WaitingReasonCreateContainerConfigError = "CreateContainerConfigError"
+	WaitingReasonInvalidImageName           = "InvalidImageName"
+	WaitingReasonCreateContainerError       = "CreateContainerError"
+	WaitingReasonErrImagePull               = "ErrImagePull"
 )
 
 func GetPodsBySelector(ctx context.Context, selector string) ([]*model.PodInfo, error) {
@@ -83,6 +92,52 @@ func containerRestarts(cs *corev1.ContainerStatus) int {
 	return int(cs.RestartCount)
 }
 
+// derivePhaseFromContainerStatus derives the pod phase from the collector container's actual state.
+// This provides a more accurate status than the pod phase when the container has issues
+// (e.g., ImagePullBackOff shows as Failed instead of Running).
+func derivePhaseFromContainerStatus(cs *corev1.ContainerStatus, podPhase corev1.PodPhase) *model.PodPhase {
+	if cs == nil {
+		return services.MapPodPhase(podPhase)
+	}
+
+	if cs.State.Waiting != nil {
+		if isWaitingReasonFailure(cs) {
+			v := model.PodPhaseFailed
+			return &v
+		}
+		v := model.PodPhasePending
+		return &v
+	}
+
+	if cs.State.Terminated != nil {
+		if cs.State.Terminated.ExitCode == 0 {
+			v := model.PodPhaseSucceeded
+			return &v
+		}
+		v := model.PodPhaseFailed
+		return &v
+	}
+
+	if cs.State.Running != nil {
+		v := model.PodPhaseRunning
+		return &v
+	}
+
+	return services.MapPodPhase(podPhase)
+}
+
+// isWaitingReasonFailure returns true if the container waiting reason indicates a failure state.
+func isWaitingReasonFailure(cs *corev1.ContainerStatus) bool {
+	if containerutils.IsContainerInBackOff(cs) {
+		return true
+	}
+	reason := cs.State.Waiting.Reason
+	return reason == WaitingReasonErrImagePull ||
+		reason == WaitingReasonCreateContainerConfigError ||
+		reason == WaitingReasonInvalidImageName ||
+		reason == WaitingReasonCreateContainerError
+}
+
 // GetCollectorPodDetails returns pod details with only the collector container.
 // This is used for the pod details drawer when clicking on a collector pod.
 func GetCollectorPodDetails(ctx context.Context, namespace, name string) (*model.PodDetails, error) {
@@ -96,10 +151,10 @@ func GetCollectorPodDetails(ctx context.Context, namespace, name string) (*model
 		nodePtr = services.StringPtr(pod.Spec.NodeName)
 	}
 
-	statusPtr := mapPodPhase(pod.Status.Phase)
-
-	// Get only the collector container
 	containerName := containers.GetCollectorContainerName(pod)
+	cs := getContainerStatusByName(pod.Status.ContainerStatuses, containerName)
+	statusPtr := derivePhaseFromContainerStatus(cs, pod.Status.Phase)
+
 	collectorContainers := buildCollectorContainerOverview(pod, containerName)
 
 	manifestYAML, err := services.K8sManifest(ctx, namespace, model.K8sResourceKindPod, name)
@@ -117,31 +172,8 @@ func GetCollectorPodDetails(ctx context.Context, namespace, name string) (*model
 	}, nil
 }
 
-func mapPodPhase(p corev1.PodPhase) *model.PodPhase {
-	switch p {
-	case corev1.PodPending:
-		v := model.PodPhasePending
-		return &v
-	case corev1.PodRunning:
-		v := model.PodPhaseRunning
-		return &v
-	case corev1.PodSucceeded:
-		v := model.PodPhaseSucceeded
-		return &v
-	case corev1.PodFailed:
-		v := model.PodPhaseFailed
-		return &v
-	case corev1.PodUnknown:
-		fallthrough
-	default:
-		v := model.PodPhaseUnknown
-		return &v
-	}
-}
-
 // buildCollectorContainerOverview builds the container overview for only the collector container.
 func buildCollectorContainerOverview(pod *corev1.Pod, containerName string) []*model.ContainerOverview {
-	// Find the container spec
 	var containerSpec *corev1.Container
 	for i := range pod.Spec.Containers {
 		if pod.Spec.Containers[i].Name == containerName {
@@ -153,99 +185,22 @@ func buildCollectorContainerOverview(pod *corev1.Pod, containerName string) []*m
 		return []*model.ContainerOverview{}
 	}
 
-	// Find the container status
 	cs := getContainerStatusByName(pod.Status.ContainerStatuses, containerName)
-
-	ready := false
-	restarts := 0
-	status := model.ContainerLifecycleStatusWaiting
-	var stateReasonPtr *string
-	var startedAtPtr *string
-
-	if cs != nil {
-		ready = cs.Ready
-		restarts = int(cs.RestartCount)
-		if cs.State.Running != nil {
-			status = model.ContainerLifecycleStatusRunning
-			if !cs.State.Running.StartedAt.IsZero() {
-				startedAtPtr = services.StringPtr(cs.State.Running.StartedAt.Time.Format(time.RFC3339))
-			}
-		} else if cs.State.Waiting != nil {
-			status = model.ContainerLifecycleStatusWaiting
-			if cs.State.Waiting.Reason != "" {
-				stateReasonPtr = services.StringPtr(cs.State.Waiting.Reason)
-			}
-		} else if cs.State.Terminated != nil {
-			status = model.ContainerLifecycleStatusTerminated
-			if cs.State.Terminated.Reason != "" {
-				stateReasonPtr = services.StringPtr(cs.State.Terminated.Reason)
-			}
-		}
-	}
+	statusInfo := ExtractContainerStatusInfo(cs)
 
 	return []*model.ContainerOverview{
 		{
 			Name:        containerSpec.Name,
 			Image:       services.StringPtr(containerSpec.Image),
-			Status:      status,
-			StateReason: stateReasonPtr,
-			Ready:       ready,
-			Restarts:    restarts,
-			StartedAt:   startedAtPtr,
-			Resources:   buildContainerResources(containerSpec.Resources),
+			Status:      statusInfo.Status,
+			StateReason: statusInfo.StateReason,
+			Ready:       statusInfo.Ready,
+			Restarts:    statusInfo.Restarts,
+			StartedAt:   statusInfo.StartedAt,
+			Resources: &model.Resources{
+				Requests: buildResourceAmounts(containerSpec.Resources.Requests),
+				Limits:   buildResourceAmounts(containerSpec.Resources.Limits),
+			},
 		},
-	}
-}
-
-func buildContainerResources(reqs corev1.ResourceRequirements) *model.Resources {
-	if reqs.Requests == nil && reqs.Limits == nil {
-		return nil
-	}
-
-	var requests *model.ResourceAmounts
-	if len(reqs.Requests) > 0 {
-		var cpuPtr, memPtr *string
-		if q, ok := reqs.Requests[corev1.ResourceCPU]; ok {
-			s := q.String()
-			cpuPtr = &s
-		}
-		if q, ok := reqs.Requests[corev1.ResourceMemory]; ok {
-			s := q.String()
-			memPtr = &s
-		}
-		if cpuPtr != nil || memPtr != nil {
-			requests = &model.ResourceAmounts{
-				CPU:    cpuPtr,
-				Memory: memPtr,
-			}
-		}
-	}
-
-	var limits *model.ResourceAmounts
-	if len(reqs.Limits) > 0 {
-		var cpuPtr, memPtr *string
-		if q, ok := reqs.Limits[corev1.ResourceCPU]; ok {
-			s := q.String()
-			cpuPtr = &s
-		}
-		if q, ok := reqs.Limits[corev1.ResourceMemory]; ok {
-			s := q.String()
-			memPtr = &s
-		}
-		if cpuPtr != nil || memPtr != nil {
-			limits = &model.ResourceAmounts{
-				CPU:    cpuPtr,
-				Memory: memPtr,
-			}
-		}
-	}
-
-	if requests == nil && limits == nil {
-		return nil
-	}
-
-	return &model.Resources{
-		Requests: requests,
-		Limits:   limits,
 	}
 }

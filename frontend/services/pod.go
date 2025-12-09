@@ -21,8 +21,7 @@ func GetPodDetails(ctx context.Context, namespace, name string) (*model.PodDetai
 		nodePtr = StringPtr(pod.Spec.NodeName)
 	}
 
-	var statusPtr *model.PodPhase
-	statusPtr = mapPodPhase(pod.Status.Phase)
+	statusPtr := MapPodPhase(pod.Status.Phase)
 
 	containers := buildContainersOverview(pod)
 
@@ -92,28 +91,6 @@ func buildContainersOverview(pod *corev1.Pod) []*model.ContainerOverview {
 		})
 	}
 	return containers
-}
-
-func mapPodPhase(p corev1.PodPhase) *model.PodPhase {
-	switch p {
-	case corev1.PodPending:
-		v := model.PodPhasePending
-		return &v
-	case corev1.PodRunning:
-		v := model.PodPhaseRunning
-		return &v
-	case corev1.PodSucceeded:
-		v := model.PodPhaseSucceeded
-		return &v
-	case corev1.PodFailed:
-		v := model.PodPhaseFailed
-		return &v
-	case corev1.PodUnknown:
-		fallthrough
-	default:
-		v := model.PodPhaseUnknown
-		return &v
-	}
 }
 
 func buildContainerResources(reqs corev1.ResourceRequirements) *model.Resources {
