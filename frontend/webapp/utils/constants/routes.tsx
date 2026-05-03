@@ -7,6 +7,8 @@ export const ROUTES = {
   SETTINGS: '/settings',
   SAMPLING: '/sampling',
 
+  SOURCE_DETAIL: (namespace: string, kind: string, name: string) => `/overview/source?namespace=${namespace}&kind=${kind}&name=${name}`,
+
   // legacy routes
   CHOOSE_STREAM: '/choose-stream',
   CHOOSE_SOURCES: '/choose-sources',

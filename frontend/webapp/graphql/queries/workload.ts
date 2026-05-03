@@ -1,5 +1,67 @@
 import { gql } from '@apollo/client';
 
+export const GET_SOURCE_TREE = gql`
+  query GetSourceTree($filter: WorkloadFilter) {
+    workloads(filter: $filter) {
+      telemetryMetrics {
+        totalDataSentBytes
+        throughputBytes
+        expectingTelemetry {
+          isExpectingTelemetry
+          telemetryObservedStatus {
+            status
+            message
+          }
+        }
+      }
+      containers {
+        containerName
+        instrumentations {
+          name
+          isStandardLibrary
+        }
+      }
+      pods {
+        podName
+        agentInjected
+        agentInjectedStatus {
+          status
+          message
+        }
+        podHealthStatus {
+          status
+          message
+        }
+        containers {
+          containerName
+          started
+          ready
+          isCrashLoop
+          healthStatus {
+            status
+            message
+          }
+          processes {
+            healthy
+            healthStatus {
+              status
+              message
+            }
+            identifyingAttributes {
+              name
+              value
+            }
+            instrumentations {
+              name
+              isStandardLibrary
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
 export const GET_WORKLOADS = gql`
   query GetWorkloads($filter: WorkloadFilter) {
     workloads(filter: $filter) {
