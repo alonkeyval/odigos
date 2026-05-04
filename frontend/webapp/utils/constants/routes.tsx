@@ -22,7 +22,7 @@ const IS_DEV = process.env.NODE_ENV === 'development';
 const HAS_WINDOW = typeof window !== 'undefined';
 const DEFAULT = 'http://localhost:8085';
 
-const BACKEND_HTTP_ORIGIN = IS_DEV || !HAS_WINDOW ? DEFAULT : window.location.origin;
+const BACKEND_HTTP_ORIGIN = IS_DEV || !HAS_WINDOW ? DEFAULT : DEFAULT;
 
 export const API = {
   BACKEND_HTTP_ORIGIN,

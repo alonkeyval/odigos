@@ -161,7 +161,11 @@ interface SamplingRulesData {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function noisySummary(rule: NoisyOpRule): string {
-  const op = rule.operation?.httpServer?.route ? `on ${rule.operation.httpServer.method ? rule.operation.httpServer.method + ' ' : ''}${rule.operation.httpServer.route}` : rule.operation?.httpClient?.serverAddress ? `to ${rule.operation.httpClient.serverAddress}` : 'on all operations';
+  const op = rule.operation?.httpServer?.route
+    ? `on ${rule.operation.httpServer.method ? rule.operation.httpServer.method + ' ' : ''}${rule.operation.httpServer.route}`
+    : rule.operation?.httpClient?.serverAddress
+      ? `to ${rule.operation.httpClient.serverAddress}`
+      : 'on all operations';
   const pct = rule.percentageAtMost != null ? `${rule.percentageAtMost}%` : '—';
   return `Drop at most ${pct} of traces ${op}`;
 }
@@ -361,6 +365,14 @@ export default function SourceDetailPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => router.push('/source-states/header')}
+                  style={{ background: 'none', border: '1px solid #6366f1', borderRadius: 6, color: '#6366f1', fontSize: 11, padding: '3px 8px', cursor: 'pointer' }}
+                >
+                  View all states →
+                </button>
+              </div>
               {source.rollbackOccurred && (
                 <StatusCard status={StatusType.Error} title='Rollback Occurred' description='Odigos detected a crash caused by instrumentation and rolled it back automatically.' />
               )}
@@ -377,7 +389,21 @@ export default function SourceDetailPage() {
 
           {/* Containers */}
           {source.containers && source.containers.length > 0 && (
-            <DataCard bgTint='1000' richTitle={{ title: 'Containers', badge: { label: String(source.containers.length) } }}>
+            <DataCard
+              bgTint='1000'
+              richTitle={{
+                title: 'Containers',
+                badge: { label: String(source.containers.length) },
+                children: (
+                  <button
+                    onClick={() => router.push('/source-states/containers')}
+                    style={{ background: 'none', border: '1px solid #6366f1', borderRadius: 6, color: '#6366f1', fontSize: 11, padding: '3px 8px', cursor: 'pointer', marginLeft: 8 }}
+                  >
+                    View all states →
+                  </button>
+                ),
+              }}
+            >
               {source.containers.map((container) => {
                 const lang = container.overrides?.runtimeInfo?.language ?? container.runtimeInfo?.language;
                 const version = container.overrides?.runtimeInfo?.runtimeVersion ?? container.runtimeInfo?.runtimeVersion;
@@ -423,12 +449,6 @@ export default function SourceDetailPage() {
                           items={[
                             { id: 'lang', title: 'Language', label: lang ?? '—' },
                             { id: 'version', title: 'Runtime Version', label: version ?? '—' },
-                            {
-                              id: 'src',
-                              title: 'Runtime Source',
-                              label: '',
-                              badge: isOverridden ? { label: 'Overridden', status: StatusType.Warning } : { label: 'Auto-detected', status: StatusType.Info },
-                            },
                           ]}
                         />
                       </div>
@@ -495,7 +515,20 @@ export default function SourceDetailPage() {
             </DataCard>
           )}
           {/* Rollout */}
-          <DataCard bgTint='1000' richTitle={{ title: 'Rollout' }}>
+          <DataCard
+            bgTint='1000'
+            richTitle={{
+              title: 'Rollout',
+              children: (
+                <button
+                  onClick={() => router.push('/source-states/rollout')}
+                  style={{ background: 'none', border: '1px solid #6366f1', borderRadius: 6, color: '#6366f1', fontSize: 11, padding: '3px 8px', cursor: 'pointer' }}
+                >
+                  View all states →
+                </button>
+              ),
+            }}
+          >
             {tree?.rollout?.rolloutStatus && (
               <DataCard
                 bgTint='900'
@@ -542,7 +575,21 @@ export default function SourceDetailPage() {
               }, {});
 
               return (
-                <DataCard bgTint='1000' richTitle={{ title: 'Pods', badge: { label: String(totalPods) } }}>
+                <DataCard
+                  bgTint='1000'
+                  richTitle={{
+                    title: 'Pods',
+                    badge: { label: String(totalPods) },
+                    children: (
+                      <button
+                        onClick={() => router.push('/source-states/pods-summary')}
+                        style={{ background: 'none', border: '1px solid #6366f1', borderRadius: 6, color: '#6366f1', fontSize: 11, padding: '3px 8px', cursor: 'pointer', marginLeft: 8 }}
+                      >
+                        View all states →
+                      </button>
+                    ),
+                  }}
+                >
                   <DataCard
                     bgTint='900'
                     cellsPerRow={2}
@@ -580,7 +627,21 @@ export default function SourceDetailPage() {
       {/* TAB: Pods                                                             */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {tab === 'pods' && tree && (
-        <DataCard bgTint='1000' richTitle={{ title: 'Pods', badge: { label: String(tree.pods.length) } }}>
+        <DataCard
+          bgTint='1000'
+          richTitle={{
+            title: 'Pods',
+            badge: { label: String(tree.pods.length) },
+            children: (
+              <button
+                onClick={() => router.push('/source-states/pods')}
+                style={{ background: 'none', border: '1px solid #6366f1', borderRadius: 6, color: '#6366f1', fontSize: 11, padding: '3px 8px', cursor: 'pointer', marginLeft: 8 }}
+              >
+                View all states →
+              </button>
+            ),
+          }}
+        >
           {tree.pods.map((pod) => {
             const podInjectionStatus = mapToStatusCardStatus(pod.agentInjectedStatus.status);
             const podHealthStatus = mapToStatusCardStatus(pod.podHealthStatus.status);
@@ -606,6 +667,19 @@ export default function SourceDetailPage() {
                     { id: 'start', title: 'Start Time', label: pod.startTime || '—' },
                   ]}
                 />
+                <DataCard bgTint='800' richTitle={{ title: 'Debug Commands' }} withCollapse collapseIsDefaultOpen={false}>
+                  <DataCard
+                    bgTint='750'
+                    cellsPerRow={1}
+                    items={[
+                      { id: 'get-pod', title: 'Get Pod', label: `kubectl get pod ${pod.podName} -n ${namespace}`, withCopy: true },
+                      { id: 'get-pod-yaml', title: 'Get Pod YAML', label: `kubectl get pod ${pod.podName} -n ${namespace} -o yaml`, withCopy: true },
+                      { id: 'describe-pod', title: 'Describe Pod', label: `kubectl describe pod ${pod.podName} -n ${namespace}`, withCopy: true },
+                      { id: 'logs-pod', title: 'Pod Logs', label: `kubectl logs ${pod.podName} -n ${namespace}`, withCopy: true },
+                      { id: 'logs-pod-prev', title: 'Pod Logs (previous)', label: `kubectl logs ${pod.podName} -n ${namespace} --previous`, withCopy: true },
+                    ]}
+                  />
+                </DataCard>
                 {pod.containers.map((podContainer) => {
                   const containerHealthStatus = mapToStatusCardStatus(podContainer.healthStatus.status);
                   const containerHasIssue = containerHealthStatus === StatusType.Error || containerHealthStatus === StatusType.Warning || !!podContainer.isCrashLoop;
@@ -622,11 +696,7 @@ export default function SourceDetailPage() {
                       collapseIsDefaultOpen={containerHasIssue}
                     >
                       {/* Odigos data */}
-                      <DataCard
-                        bgTint='750'
-                        cellsPerRow={1}
-                        items={[{ id: 'distro', title: 'OTel Distro', label: podContainer.otelDistroName || '—' }]}
-                      />
+                      <DataCard bgTint='750' cellsPerRow={1} items={[{ id: 'distro', title: 'OTel Distro', label: podContainer.otelDistroName || '—' }]} />
                       {/* K8s status */}
                       <DataCard
                         bgTint='750'
@@ -677,7 +747,12 @@ export default function SourceDetailPage() {
                                 cellsPerRow={3}
                                 items={[
                                   { id: 'lib', title: 'Name', label: lib.name },
-                                  { id: 'std', title: 'Type', label: '', badge: lib.isStandardLibrary ? { label: 'Standard Library', status: StatusType.Info } : { label: 'User Library', status: OtherStatusType.Unknown } },
+                                  {
+                                    id: 'std',
+                                    title: 'Type',
+                                    label: '',
+                                    badge: lib.isStandardLibrary ? { label: 'Standard Library', status: StatusType.Info } : { label: 'User Library', status: OtherStatusType.Unknown },
+                                  },
                                   { id: 'err', title: 'Error', label: '—' },
                                 ]}
                               />
@@ -753,209 +828,471 @@ export default function SourceDetailPage() {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* TAB: Sampling                                                         */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      {tab === 'sampling' && (() => {
-        const opLabel = (op: NoisyOpRule['operation'] | HighlyRelevantRule['operation']): string => {
-          if (op?.httpServer?.route) return `HTTP ${op.httpServer.route}`;
-          if ((op as NoisyOpRule['operation'])?.httpClient?.serverAddress) return `→ ${(op as NoisyOpRule['operation'])!.httpClient!.serverAddress}`;
-          return 'All operations';
-        };
+      {tab === 'sampling' &&
+        (() => {
+          const opLabel = (op: NoisyOpRule['operation'] | HighlyRelevantRule['operation']): string => {
+            if (op?.httpServer?.route) return `HTTP ${op.httpServer.route}`;
+            if ((op as NoisyOpRule['operation'])?.httpClient?.serverAddress) return `→ ${(op as NoisyOpRule['operation'])!.httpClient!.serverAddress}`;
+            return 'All operations';
+          };
 
-        return (
-          <DataCard bgTint='1000' richTitle={{ title: 'Sampling', badge: { label: String(source.containers?.length ?? 0) } }}>
-            {source.containers?.map((container) => {
-              const treeContainer = tree?.containers.find((c) => c.containerName === container.containerName);
-              const headSampling = treeContainer?.agentConfig?.traces?.headSampling;
-              const containerLang = (container.overrides?.runtimeInfo?.language ?? container.runtimeInfo?.language) as string | undefined;
-              const containerLanguages = containerLang ? [containerLang] : (source.detectedLanguages ?? []) as string[];
+          return (
+            <DataCard bgTint='1000' richTitle={{ title: 'Sampling', badge: { label: String(source.containers?.length ?? 0) } }}>
+              {source.containers?.map((container) => {
+                const treeContainer = tree?.containers.find((c) => c.containerName === container.containerName);
+                const headSampling = treeContainer?.agentConfig?.traces?.headSampling;
+                const containerLang = (container.overrides?.runtimeInfo?.language ?? container.runtimeInfo?.language) as string | undefined;
+                const containerLanguages = containerLang ? [containerLang] : ((source.detectedLanguages ?? []) as string[]);
 
-              const noisyOps = samplingRules?.rules.flatMap((r) => r.noisyOperations).filter((r) => !r.disabled && ruleAppliesToWorkload(r.sourceScopes, namespace, kind, name, containerLanguages)) ?? [];
-              const highlyRelevant = samplingRules?.rules.flatMap((r) => r.highlyRelevantOperations).filter((r) => !r.disabled && ruleAppliesToWorkload(r.sourceScopes, namespace, kind, name, containerLanguages)) ?? [];
-              const costReduction = samplingRules?.rules.flatMap((r) => r.costReductionRules).filter((r) => !r.disabled && ruleAppliesToWorkload(r.sourceScopes, namespace, kind, name, containerLanguages)) ?? [];
+                const noisyOps =
+                  samplingRules?.rules.flatMap((r) => r.noisyOperations).filter((r) => !r.disabled && ruleAppliesToWorkload(r.sourceScopes, namespace, kind, name, containerLanguages)) ?? [];
+                const highlyRelevant =
+                  samplingRules?.rules.flatMap((r) => r.highlyRelevantOperations).filter((r) => !r.disabled && ruleAppliesToWorkload(r.sourceScopes, namespace, kind, name, containerLanguages)) ?? [];
+                const costReduction =
+                  samplingRules?.rules.flatMap((r) => r.costReductionRules).filter((r) => !r.disabled && ruleAppliesToWorkload(r.sourceScopes, namespace, kind, name, containerLanguages)) ?? [];
 
-              return (
-                <DataCard
-                  key={container.containerName}
-                  bgTint='900'
-                  richTitle={{ title: container.containerName }}
-                  withCollapse
-                  collapseIsDefaultOpen
-                >
-                  {/* Head Sampling */}
-                  <DataCard
-                    bgTint='800'
-                    richTitle={{
-                      title: 'Head Sampling',
-                      badge: headSampling ? { label: 'On', status: StatusType.Success } : { label: 'Off', status: OtherStatusType.Disabled },
-                    }}
-                  />
+                return (
+                  <DataCard key={container.containerName} bgTint='900' richTitle={{ title: container.containerName }} withCollapse collapseIsDefaultOpen>
+                    {/* Head Sampling */}
+                    <DataCard
+                      bgTint='800'
+                      richTitle={{
+                        title: 'Head Sampling',
+                        badge: headSampling ? { label: 'On', status: StatusType.Success } : { label: 'Off', status: OtherStatusType.Disabled },
+                      }}
+                    />
 
-                  {/* Tail Sampling */}
-                  <DataCard
-                    bgTint='800'
-                    richTitle={{
-                      title: 'Tail Sampling',
-                      badge: samplingRules
-                        ? { label: String(noisyOps.length + highlyRelevant.length + costReduction.length), status: noisyOps.length + highlyRelevant.length + costReduction.length > 0 ? StatusType.Success : OtherStatusType.Disabled }
-                        : undefined,
-                    }}
-                    withCollapse
-                    collapseIsDefaultOpen={noisyOps.length + highlyRelevant.length + costReduction.length > 0}
-                  >
-                    {!samplingRules && <Typography size={TypographySize.S}>Loading rules...</Typography>}
-                    {samplingRules && noisyOps.length === 0 && highlyRelevant.length === 0 && costReduction.length === 0 && (
-                      <NoData title='No sampling rules' subTitle='No sampling rules apply to this container' />
-                    )}
-                    {noisyOps.length > 0 && (
-                      <DataCard bgTint='750' richTitle={{ title: 'Noisy Operations', badge: { label: String(noisyOps.length) } }} withCollapse collapseIsDefaultOpen>
-                        {noisyOps.map((rule) => (
-                          <DataCard
-                            key={rule.ruleId}
-                            bgTint='700'
-                            richTitle={{ title: rule.name || rule.ruleId, subTitle: noisySummary(rule) }}
-                            withCollapse
-                          >
-                            <DataCard bgTint='600' cellsPerRow={3} items={[
-                              { id: 'pct', title: 'Keep at most %', label: rule.percentageAtMost != null ? `${rule.percentageAtMost}%` : '—' },
-                              { id: 'op', title: 'Operation', label: opLabel(rule.operation) },
-                              ...(rule.notes ? [{ id: 'notes', title: 'Notes', label: rule.notes }] : []),
-                            ]} />
-                            <button onClick={() => router.push('/sampling')} style={{ alignSelf: 'flex-start', cursor: 'pointer', background: 'none', border: 'none', padding: '4px 0' }}>
-                              <Typography size={TypographySize.XS}>View Rule →</Typography>
-                            </button>
-                          </DataCard>
-                        ))}
-                      </DataCard>
-                    )}
-                    {highlyRelevant.length > 0 && (
-                      <DataCard bgTint='750' richTitle={{ title: 'Highly Relevant Operations', badge: { label: String(highlyRelevant.length) } }} withCollapse collapseIsDefaultOpen>
-                        {highlyRelevant.map((rule) => (
-                          <DataCard
-                            key={rule.ruleId}
-                            bgTint='700'
-                            richTitle={{ title: rule.name || rule.ruleId, subTitle: highlyRelevantSummary(rule) }}
-                            withCollapse
-                          >
-                            <DataCard bgTint='600' cellsPerRow={4} items={[
-                              { id: 'pct', title: 'Keep at least %', label: rule.percentageAtLeast != null ? `${rule.percentageAtLeast}%` : '—' },
-                              { id: 'dur', title: 'Min Duration', label: rule.durationAtLeastMs != null ? `${rule.durationAtLeastMs}ms` : '—' },
-                              { id: 'err', title: 'Errors Only', label: '', badge: rule.error ? { label: 'Yes', status: StatusType.Warning } : { label: 'No', status: OtherStatusType.Disabled } },
-                              ...(rule.notes ? [{ id: 'notes', title: 'Notes', label: rule.notes }] : []),
-                            ]} />
-                            <button onClick={() => router.push('/sampling')} style={{ alignSelf: 'flex-start', cursor: 'pointer', background: 'none', border: 'none', padding: '4px 0' }}>
-                              <Typography size={TypographySize.XS}>View Rule →</Typography>
-                            </button>
-                          </DataCard>
-                        ))}
-                      </DataCard>
-                    )}
-                    {costReduction.length > 0 && (
-                      <DataCard bgTint='750' richTitle={{ title: 'Cost Reduction', badge: { label: String(costReduction.length) } }} withCollapse collapseIsDefaultOpen>
-                        {costReduction.map((rule) => (
-                          <DataCard
-                            key={rule.ruleId}
-                            bgTint='700'
-                            richTitle={{ title: rule.name || rule.ruleId, subTitle: costReductionSummary(rule) }}
-                            withCollapse
-                          >
-                            <DataCard bgTint='600' cellsPerRow={3} items={[
-                              { id: 'pct', title: 'Drop at most %', label: `${rule.percentageAtMost}%` },
-                              { id: 'op', title: 'Operation', label: opLabel(rule.operation) },
-                              ...(rule.notes ? [{ id: 'notes', title: 'Notes', label: rule.notes }] : []),
-                            ]} />
-                            <button onClick={() => router.push('/sampling')} style={{ alignSelf: 'flex-start', cursor: 'pointer', background: 'none', border: 'none', padding: '4px 0' }}>
-                              <Typography size={TypographySize.XS}>View Rule →</Typography>
-                            </button>
-                          </DataCard>
-                        ))}
-                      </DataCard>
-                    )}
+                    {/* Tail Sampling */}
+                    <DataCard
+                      bgTint='800'
+                      richTitle={{
+                        title: 'Tail Sampling',
+                        badge: samplingRules
+                          ? {
+                              label: String(noisyOps.length + highlyRelevant.length + costReduction.length),
+                              status: noisyOps.length + highlyRelevant.length + costReduction.length > 0 ? StatusType.Success : OtherStatusType.Disabled,
+                            }
+                          : undefined,
+                      }}
+                      withCollapse
+                      collapseIsDefaultOpen={noisyOps.length + highlyRelevant.length + costReduction.length > 0}
+                    >
+                      {!samplingRules && <Typography size={TypographySize.S}>Loading rules...</Typography>}
+                      {samplingRules && noisyOps.length === 0 && highlyRelevant.length === 0 && costReduction.length === 0 && (
+                        <NoData title='No sampling rules' subTitle='No sampling rules apply to this container' />
+                      )}
+                      {noisyOps.length > 0 && (
+                        <DataCard bgTint='750' richTitle={{ title: 'Noisy Operations', badge: { label: String(noisyOps.length) } }} withCollapse collapseIsDefaultOpen>
+                          {noisyOps.map((rule) => (
+                            <DataCard key={rule.ruleId} bgTint='700' richTitle={{ title: rule.name || rule.ruleId, subTitle: noisySummary(rule) }} withCollapse>
+                              <DataCard
+                                bgTint='600'
+                                cellsPerRow={3}
+                                items={[
+                                  { id: 'pct', title: 'Keep at most %', label: rule.percentageAtMost != null ? `${rule.percentageAtMost}%` : '—' },
+                                  { id: 'op', title: 'Operation', label: opLabel(rule.operation) },
+                                  ...(rule.notes ? [{ id: 'notes', title: 'Notes', label: rule.notes }] : []),
+                                ]}
+                              />
+                              <button onClick={() => router.push('/sampling')} style={{ alignSelf: 'flex-start', cursor: 'pointer', background: 'none', border: 'none', padding: '4px 0' }}>
+                                <Typography size={TypographySize.XS}>View Rule →</Typography>
+                              </button>
+                            </DataCard>
+                          ))}
+                        </DataCard>
+                      )}
+                      {highlyRelevant.length > 0 && (
+                        <DataCard bgTint='750' richTitle={{ title: 'Highly Relevant Operations', badge: { label: String(highlyRelevant.length) } }} withCollapse collapseIsDefaultOpen>
+                          {highlyRelevant.map((rule) => (
+                            <DataCard key={rule.ruleId} bgTint='700' richTitle={{ title: rule.name || rule.ruleId, subTitle: highlyRelevantSummary(rule) }} withCollapse>
+                              <DataCard
+                                bgTint='600'
+                                cellsPerRow={4}
+                                items={[
+                                  { id: 'pct', title: 'Keep at least %', label: rule.percentageAtLeast != null ? `${rule.percentageAtLeast}%` : '—' },
+                                  { id: 'dur', title: 'Min Duration', label: rule.durationAtLeastMs != null ? `${rule.durationAtLeastMs}ms` : '—' },
+                                  { id: 'err', title: 'Errors Only', label: '', badge: rule.error ? { label: 'Yes', status: StatusType.Warning } : { label: 'No', status: OtherStatusType.Disabled } },
+                                  ...(rule.notes ? [{ id: 'notes', title: 'Notes', label: rule.notes }] : []),
+                                ]}
+                              />
+                              <button onClick={() => router.push('/sampling')} style={{ alignSelf: 'flex-start', cursor: 'pointer', background: 'none', border: 'none', padding: '4px 0' }}>
+                                <Typography size={TypographySize.XS}>View Rule →</Typography>
+                              </button>
+                            </DataCard>
+                          ))}
+                        </DataCard>
+                      )}
+                      {costReduction.length > 0 && (
+                        <DataCard bgTint='750' richTitle={{ title: 'Cost Reduction', badge: { label: String(costReduction.length) } }} withCollapse collapseIsDefaultOpen>
+                          {costReduction.map((rule) => (
+                            <DataCard key={rule.ruleId} bgTint='700' richTitle={{ title: rule.name || rule.ruleId, subTitle: costReductionSummary(rule) }} withCollapse>
+                              <DataCard
+                                bgTint='600'
+                                cellsPerRow={3}
+                                items={[
+                                  { id: 'pct', title: 'Drop at most %', label: `${rule.percentageAtMost}%` },
+                                  { id: 'op', title: 'Operation', label: opLabel(rule.operation) },
+                                  ...(rule.notes ? [{ id: 'notes', title: 'Notes', label: rule.notes }] : []),
+                                ]}
+                              />
+                              <button onClick={() => router.push('/sampling')} style={{ alignSelf: 'flex-start', cursor: 'pointer', background: 'none', border: 'none', padding: '4px 0' }}>
+                                <Typography size={TypographySize.XS}>View Rule →</Typography>
+                              </button>
+                            </DataCard>
+                          ))}
+                        </DataCard>
+                      )}
+                    </DataCard>
                   </DataCard>
-                </DataCard>
-              );
-            })}
-          </DataCard>
-        );
-      })()}
+                );
+              })}
+            </DataCard>
+          );
+        })()}
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* TAB: URL Templatization                                               */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      {tab === 'url-templatization' && (() => {
-        // TODO: replace with API data once WorkloadCollectorConfig is in GQL
-        type UrlTemplatizationState = { rules: string[] } | 'default' | null;
-        const mockTemplatization: Record<string, UrlTemplatizationState> = {};
-        (source.containers ?? []).forEach((c, i) => {
-          if (i === 0) mockTemplatization[c.containerName] = { rules: ['/api/users/{id}', '/api/orders/{orderId}/items/{itemId}', '/api/products/{productId}/reviews/{reviewId}'] };
-          else if (i === 1) mockTemplatization[c.containerName] = 'default';
-          else mockTemplatization[c.containerName] = null;
-        });
+      {tab === 'url-templatization' &&
+        (() => {
+          // TODO: replace with API data once WorkloadCollectorConfig is in GQL
+          type UrlTemplatizationState = { rules: string[] } | 'default' | null;
+          const mockTemplatization: Record<string, UrlTemplatizationState> = {};
+          (source.containers ?? []).forEach((c, i) => {
+            if (i === 0) mockTemplatization[c.containerName] = { rules: ['/api/users/{id}', '/api/orders/{orderId}/items/{itemId}', '/api/products/{productId}/reviews/{reviewId}'] };
+            else if (i === 1) mockTemplatization[c.containerName] = 'default';
+            else mockTemplatization[c.containerName] = null;
+          });
 
-        return (
-          <DataCard bgTint='1000' richTitle={{ title: 'URL Templatization', badge: { label: String(source.containers?.length ?? 0) } }}>
-            {(source.containers ?? []).map((container) => {
-              const state = mockTemplatization[container.containerName] ?? null;
-              const badge =
-                state === null
-                  ? { label: 'None', status: OtherStatusType.Disabled }
-                  : state === 'default'
-                  ? { label: 'Default', status: StatusType.Info }
-                  : { label: 'Custom', status: StatusType.Success };
+          return (
+            <DataCard bgTint='1000' richTitle={{ title: 'URL Templatization', badge: { label: String(source.containers?.length ?? 0) } }}>
+              {(source.containers ?? []).map((container) => {
+                const state = mockTemplatization[container.containerName] ?? null;
+                const badge =
+                  state === null
+                    ? { label: 'None', status: OtherStatusType.Disabled }
+                    : state === 'default'
+                      ? { label: 'Default', status: StatusType.Info }
+                      : { label: 'Custom', status: StatusType.Success };
 
-              return (
-                <DataCard
-                  key={container.containerName}
-                  bgTint='900'
-                  richTitle={{ title: container.containerName, badge }}
-                  withCollapse
-                  collapseIsDefaultOpen
-                >
-                  {state === null && (
-                    <NoData title='Not Configured' subTitle='No URL templatization rules apply to this container' />
-                  )}
-                  {state === 'default' && (
-                    <DataCard
-                      bgTint='800'
-                      cellsPerRow={1}
-                      items={[{ id: 'default', title: 'Applied Rules', label: 'Default rules applied — Odigos automatically templatizes common URL patterns' }]}
-                    />
-                  )}
-                  {state !== null && state !== 'default' && state.rules.map((rule, i) => (
-                    <DataCard
-                      key={i}
-                      bgTint='800'
-                      cellsPerRow={1}
-                      items={[{ id: `rule-${i}`, title: 'Rule', label: rule, withCopy: true }]}
-                    />
-                  ))}
-                </DataCard>
-              );
-            })}
-          </DataCard>
-        );
-      })()}
+                return (
+                  <DataCard key={container.containerName} bgTint='900' richTitle={{ title: container.containerName, badge }} withCollapse collapseIsDefaultOpen>
+                    {state === null && <NoData title='Not Configured' subTitle='No URL templatization rules apply to this container' />}
+                    {state === 'default' && (
+                      <DataCard
+                        bgTint='800'
+                        cellsPerRow={1}
+                        items={[{ id: 'default', title: 'Applied Rules', label: 'Default rules applied — Odigos automatically templatizes common URL patterns' }]}
+                      />
+                    )}
+                    {state !== null &&
+                      state !== 'default' &&
+                      state.rules.map((rule, i) => <DataCard key={i} bgTint='800' cellsPerRow={1} items={[{ id: `rule-${i}`, title: 'Rule', label: rule, withCopy: true }]} />)}
+                  </DataCard>
+                );
+              })}
+            </DataCard>
+          );
+        })()}
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* TAB: General Config                                                   */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      {tab === 'general-config' && <NoData title='General Config' subTitle='General configuration coming soon' />}
+      {tab === 'general-config' &&
+        (() => {
+          // TODO: replace with API data once AgentTracesConfig fields are in GQL
+          interface MockGeneralConfig {
+            headersCollection: { httpHeaderKeys: string[] } | null;
+            spanRenamer: { scopeRules: { scopeName: string; regexReplacements: { pattern: string; replacement: string }[] }[] } | null;
+            payloadCollection: {
+              httpRequest: { mimeTypes: string[]; maxPayloadLength: number } | null;
+              httpResponse: { mimeTypes: string[]; maxPayloadLength: number } | null;
+              dbQuery: { maxPayloadLength: number; sanitizationPolicy: string } | null;
+              messaging: { maxPayloadLength: number } | null;
+            } | null;
+            codeAttributes: { column: boolean; filePath: boolean; function: boolean; lineNumber: boolean; namespace: boolean; stacktrace: boolean } | null;
+            traceVerbosity: { disabledLibraries: { language: string; libraryName: string }[]; enabledLibraries: { language: string; libraryName: string }[] } | null;
+            customInstrumentations: {
+              golang: { packageName: string; functionName?: string; receiverName?: string; receiverMethodName?: string }[];
+              java: { className: string; methodName: string }[];
+            } | null;
+          }
+
+          const mockConfigs: Record<string, MockGeneralConfig> = {};
+          (source.containers ?? []).forEach((c, i) => {
+            if (i === 0) {
+              mockConfigs[c.containerName] = {
+                headersCollection: { httpHeaderKeys: ['x-request-id', 'authorization', 'x-trace-id'] },
+                spanRenamer: { scopeRules: [{ scopeName: 'net/http', regexReplacements: [{ pattern: '/api/v[0-9]+/', replacement: '/api/' }] }] },
+                payloadCollection: {
+                  httpRequest: { mimeTypes: ['application/json'], maxPayloadLength: 4096 },
+                  httpResponse: { mimeTypes: ['application/json'], maxPayloadLength: 4096 },
+                  dbQuery: { maxPayloadLength: 1024, sanitizationPolicy: 'sanitized' },
+                  messaging: null,
+                },
+                codeAttributes: { column: false, filePath: true, function: true, lineNumber: true, namespace: true, stacktrace: false },
+                traceVerbosity: { disabledLibraries: [{ language: 'go', libraryName: 'net/http/internal' }], enabledLibraries: [{ language: 'nodejs', libraryName: 'fs' }] },
+                customInstrumentations: {
+                  golang: [{ packageName: 'net/http', receiverName: 'response', receiverMethodName: 'WriteHeader' }],
+                  java: [{ className: 'com.example.service.PaymentService', methodName: 'processPayment' }],
+                },
+              };
+            } else if (i === 1) {
+              mockConfigs[c.containerName] = {
+                headersCollection: { httpHeaderKeys: ['x-correlation-id'] },
+                spanRenamer: null,
+                payloadCollection: null,
+                codeAttributes: { column: false, filePath: true, function: true, lineNumber: false, namespace: false, stacktrace: false },
+                traceVerbosity: null,
+                customInstrumentations: null,
+              };
+            } else {
+              mockConfigs[c.containerName] = { headersCollection: null, spanRenamer: null, payloadCollection: null, codeAttributes: null, traceVerbosity: null, customInstrumentations: null };
+            }
+          });
+
+          const onBadge = { label: 'On', status: StatusType.Success };
+          const offBadge = { label: 'Off', status: OtherStatusType.Disabled };
+
+          return (
+            <DataCard bgTint='1000' richTitle={{ title: 'General Config', badge: { label: String(source.containers?.length ?? 0) } }}>
+              {(source.containers ?? []).map((container) => {
+                const cfg = mockConfigs[container.containerName];
+                const activeCount = [cfg.headersCollection, cfg.spanRenamer, cfg.payloadCollection, cfg.codeAttributes, cfg.traceVerbosity, cfg.customInstrumentations].filter(Boolean).length;
+
+                return (
+                  <DataCard
+                    key={container.containerName}
+                    bgTint='900'
+                    richTitle={{ title: container.containerName, badge: { label: `${activeCount} active`, status: activeCount > 0 ? StatusType.Success : OtherStatusType.Disabled } }}
+                    withCollapse
+                    collapseIsDefaultOpen
+                  >
+                    {/* Headers Collection */}
+                    <DataCard bgTint='800' richTitle={{ title: 'Headers Collection', badge: cfg.headersCollection ? onBadge : offBadge }} withCollapse collapseIsDefaultOpen={!!cfg.headersCollection}>
+                      {cfg.headersCollection ? (
+                        <DataCard bgTint='750' cellsPerRow={1} items={cfg.headersCollection.httpHeaderKeys.map((h, i) => ({ id: `h-${i}`, title: 'Header Key', label: h, withCopy: true }))} />
+                      ) : (
+                        <NoData title='Not configured' subTitle='No HTTP headers will be collected' />
+                      )}
+                    </DataCard>
+
+                    {/* Span Renamer */}
+                    <DataCard bgTint='800' richTitle={{ title: 'Span Renamer', badge: cfg.spanRenamer ? onBadge : offBadge }} withCollapse collapseIsDefaultOpen={!!cfg.spanRenamer}>
+                      {cfg.spanRenamer ? (
+                        cfg.spanRenamer.scopeRules.map((rule, i) => (
+                          <DataCard key={i} bgTint='750' richTitle={{ title: rule.scopeName }} withCollapse collapseIsDefaultOpen>
+                            {rule.regexReplacements.map((r, j) => (
+                              <DataCard
+                                key={j}
+                                bgTint='700'
+                                cellsPerRow={2}
+                                items={[
+                                  { id: 'pat', title: 'Pattern', label: r.pattern },
+                                  { id: 'rep', title: 'Replacement', label: r.replacement },
+                                ]}
+                              />
+                            ))}
+                          </DataCard>
+                        ))
+                      ) : (
+                        <NoData title='Not configured' subTitle='No span renaming rules apply' />
+                      )}
+                    </DataCard>
+
+                    {/* Payload Collection */}
+                    <DataCard bgTint='800' richTitle={{ title: 'Payload Collection', badge: cfg.payloadCollection ? onBadge : offBadge }} withCollapse collapseIsDefaultOpen={!!cfg.payloadCollection}>
+                      {cfg.payloadCollection ? (
+                        <>
+                          {cfg.payloadCollection.httpRequest && (
+                            <DataCard
+                              bgTint='750'
+                              cellsPerRow={2}
+                              items={[
+                                { id: 'type', title: 'Type', label: 'HTTP Request' },
+                                { id: 'mime', title: 'MIME Types', label: cfg.payloadCollection.httpRequest.mimeTypes.join(', ') },
+                                { id: 'max', title: 'Max Length', label: `${cfg.payloadCollection.httpRequest.maxPayloadLength} bytes` },
+                              ]}
+                            />
+                          )}
+                          {cfg.payloadCollection.httpResponse && (
+                            <DataCard
+                              bgTint='750'
+                              cellsPerRow={2}
+                              items={[
+                                { id: 'type', title: 'Type', label: 'HTTP Response' },
+                                { id: 'mime', title: 'MIME Types', label: cfg.payloadCollection.httpResponse.mimeTypes.join(', ') },
+                                { id: 'max', title: 'Max Length', label: `${cfg.payloadCollection.httpResponse.maxPayloadLength} bytes` },
+                              ]}
+                            />
+                          )}
+                          {cfg.payloadCollection.dbQuery && (
+                            <DataCard
+                              bgTint='750'
+                              cellsPerRow={2}
+                              items={[
+                                { id: 'type', title: 'Type', label: 'DB Query' },
+                                { id: 'san', title: 'Sanitization', label: cfg.payloadCollection.dbQuery.sanitizationPolicy },
+                                { id: 'max', title: 'Max Length', label: `${cfg.payloadCollection.dbQuery.maxPayloadLength} bytes` },
+                              ]}
+                            />
+                          )}
+                          {cfg.payloadCollection.messaging && (
+                            <DataCard
+                              bgTint='750'
+                              cellsPerRow={2}
+                              items={[
+                                { id: 'type', title: 'Type', label: 'Messaging' },
+                                { id: 'max', title: 'Max Length', label: `${cfg.payloadCollection.messaging.maxPayloadLength} bytes` },
+                              ]}
+                            />
+                          )}
+                        </>
+                      ) : (
+                        <NoData title='Not configured' subTitle='No payload collection rules apply' />
+                      )}
+                    </DataCard>
+
+                    {/* Code Attributes */}
+                    <DataCard bgTint='800' richTitle={{ title: 'Code Attributes', badge: cfg.codeAttributes ? onBadge : offBadge }} withCollapse collapseIsDefaultOpen={!!cfg.codeAttributes}>
+                      {cfg.codeAttributes ? (
+                        <DataCard
+                          bgTint='750'
+                          cellsPerRow={3}
+                          items={[
+                            { id: 'col', title: 'Column', label: '', badge: cfg.codeAttributes.column ? onBadge : offBadge },
+                            { id: 'fp', title: 'File Path', label: '', badge: cfg.codeAttributes.filePath ? onBadge : offBadge },
+                            { id: 'fn', title: 'Function', label: '', badge: cfg.codeAttributes.function ? onBadge : offBadge },
+                            { id: 'ln', title: 'Line Number', label: '', badge: cfg.codeAttributes.lineNumber ? onBadge : offBadge },
+                            { id: 'ns', title: 'Namespace', label: '', badge: cfg.codeAttributes.namespace ? onBadge : offBadge },
+                            { id: 'st', title: 'Stacktrace', label: '', badge: cfg.codeAttributes.stacktrace ? onBadge : offBadge },
+                          ]}
+                        />
+                      ) : (
+                        <NoData title='Not configured' subTitle='No code attribute collection configured' />
+                      )}
+                    </DataCard>
+
+                    {/* Trace Verbosity */}
+                    <DataCard bgTint='800' richTitle={{ title: 'Trace Verbosity', badge: cfg.traceVerbosity ? onBadge : offBadge }} withCollapse collapseIsDefaultOpen={!!cfg.traceVerbosity}>
+                      {cfg.traceVerbosity ? (
+                        <>
+                          {cfg.traceVerbosity.disabledLibraries.length > 0 && (
+                            <DataCard bgTint='750' richTitle={{ title: 'Disabled Libraries', badge: { label: String(cfg.traceVerbosity.disabledLibraries.length) } }}>
+                              {cfg.traceVerbosity.disabledLibraries.map((lib, i) => (
+                                <DataCard
+                                  key={i}
+                                  bgTint='700'
+                                  cellsPerRow={2}
+                                  items={[
+                                    { id: 'lang', title: 'Language', label: lib.language },
+                                    { id: 'lib', title: 'Library', label: lib.libraryName },
+                                  ]}
+                                />
+                              ))}
+                            </DataCard>
+                          )}
+                          {cfg.traceVerbosity.enabledLibraries.length > 0 && (
+                            <DataCard bgTint='750' richTitle={{ title: 'Enabled Libraries', badge: { label: String(cfg.traceVerbosity.enabledLibraries.length) } }}>
+                              {cfg.traceVerbosity.enabledLibraries.map((lib, i) => (
+                                <DataCard
+                                  key={i}
+                                  bgTint='700'
+                                  cellsPerRow={2}
+                                  items={[
+                                    { id: 'lang', title: 'Language', label: lib.language },
+                                    { id: 'lib', title: 'Library', label: lib.libraryName },
+                                  ]}
+                                />
+                              ))}
+                            </DataCard>
+                          )}
+                        </>
+                      ) : (
+                        <NoData title='Not configured' subTitle='Default trace verbosity applies' />
+                      )}
+                    </DataCard>
+
+                    {/* Custom Instrumentations */}
+                    <DataCard
+                      bgTint='800'
+                      richTitle={{ title: 'Custom Instrumentations', badge: cfg.customInstrumentations ? onBadge : offBadge }}
+                      withCollapse
+                      collapseIsDefaultOpen={!!cfg.customInstrumentations}
+                    >
+                      {cfg.customInstrumentations ? (
+                        <>
+                          {cfg.customInstrumentations.golang.length > 0 && (
+                            <DataCard bgTint='750' richTitle={{ title: 'Golang', badge: { label: String(cfg.customInstrumentations.golang.length) } }}>
+                              {cfg.customInstrumentations.golang.map((p, i) => (
+                                <DataCard
+                                  key={i}
+                                  bgTint='700'
+                                  cellsPerRow={3}
+                                  items={[
+                                    { id: 'pkg', title: 'Package', label: p.packageName },
+                                    ...(p.functionName ? [{ id: 'fn', title: 'Function', label: p.functionName }] : []),
+                                    ...(p.receiverName ? [{ id: 'recv', title: 'Receiver', label: p.receiverName }] : []),
+                                    ...(p.receiverMethodName ? [{ id: 'method', title: 'Method', label: p.receiverMethodName }] : []),
+                                  ]}
+                                />
+                              ))}
+                            </DataCard>
+                          )}
+                          {cfg.customInstrumentations.java.length > 0 && (
+                            <DataCard bgTint='750' richTitle={{ title: 'Java', badge: { label: String(cfg.customInstrumentations.java.length) } }}>
+                              {cfg.customInstrumentations.java.map((p, i) => (
+                                <DataCard
+                                  key={i}
+                                  bgTint='700'
+                                  cellsPerRow={2}
+                                  items={[
+                                    { id: 'cls', title: 'Class', label: p.className },
+                                    { id: 'method', title: 'Method', label: p.methodName },
+                                  ]}
+                                />
+                              ))}
+                            </DataCard>
+                          )}
+                        </>
+                      ) : (
+                        <NoData title='Not configured' subTitle='No custom instrumentation probes configured' />
+                      )}
+                    </DataCard>
+                  </DataCard>
+                );
+              })}
+            </DataCard>
+          );
+        })()}
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* TAB: Debug                                                            */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {tab === 'debug' && (
         <DataCard bgTint='1000' richTitle={{ title: 'Debug Commands' }}>
-          <DataCard bgTint='900' cellsPerRow={1} items={[{ id: 'kubectl', title: 'Get workload', label: `kubectl get ${kind.toLowerCase()} ${name} -n ${namespace}`, withCopy: true }]} />
-          <DataCard
-            bgTint='900'
-            cellsPerRow={1}
-            items={[{ id: 'kubectl-yaml', title: 'Get workload YAML', label: `kubectl get ${kind.toLowerCase()} ${name} -n ${namespace} -o yaml`, withCopy: true }]}
-          />
-          <DataCard bgTint='900' cellsPerRow={1} items={[{ id: 'kubectl-pods', title: 'List pods', label: `kubectl get pods -n ${namespace} -l app=${name}`, withCopy: true }]} />
-          <DataCard
-            bgTint='900'
-            cellsPerRow={1}
-            items={[{ id: 'kubectl-desc', title: 'Describe workload', label: `kubectl describe ${kind.toLowerCase()} ${name} -n ${namespace}`, withCopy: true }]}
-          />
+          <DataCard bgTint='900' richTitle={{ title: 'Commands' }} withCollapse collapseIsDefaultOpen>
+            <DataCard
+              bgTint='800'
+              cellsPerRow={1}
+              items={[
+                { id: 'kubectl', title: 'Get workload', label: `kubectl get ${kind.toLowerCase()} ${name} -n ${namespace}`, withCopy: true },
+                { id: 'kubectl-yaml', title: 'Get workload YAML', label: `kubectl get ${kind.toLowerCase()} ${name} -n ${namespace} -o yaml`, withCopy: true },
+                { id: 'kubectl-pods', title: 'List pods', label: `kubectl get pods -n ${namespace} -l app=${name}`, withCopy: true },
+                { id: 'kubectl-desc', title: 'Describe workload', label: `kubectl describe ${kind.toLowerCase()} ${name} -n ${namespace}`, withCopy: true },
+              ]}
+            />
+          </DataCard>
+          <DataCard bgTint='900' richTitle={{ title: 'K8s YAMLs' }} withCollapse collapseIsDefaultOpen>
+            <DataCard
+              bgTint='800'
+              cellsPerRow={1}
+              items={[
+                { id: 'yaml-deployment', title: `${kind} YAML`, label: `kubectl get ${kind.toLowerCase()} ${name} -n ${namespace} -o yaml`, withCopy: true },
+                { id: 'yaml-ic', title: 'InstrumentationConfig YAML', label: `kubectl get instrumentationconfig ${kind.toLowerCase()}-${name} -n ${namespace} -o yaml`, withCopy: true },
+              ]}
+            />
+          </DataCard>
         </DataCard>
       )}
     </div>
