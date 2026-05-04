@@ -27,15 +27,22 @@ func getOdigosConfigFromConfigMap(ctx context.Context, c client.Client, configMa
 		return nil, client.IgnoreNotFound(err)
 	}
 
-	if cm.Data == nil || cm.Data[consts.OdigosConfigurationFileName] == "" {
+	return OdigosConfigurationFromConfigMap(&cm)
+}
+
+// OdigosConfigurationFromConfigMap parses config.yaml from ConfigMap data.
+func OdigosConfigurationFromConfigMap(cm *v1.ConfigMap) (*common.OdigosConfiguration, error) {
+	if cm == nil || cm.Data == nil {
 		return nil, nil
 	}
-
+	raw := cm.Data[consts.OdigosConfigurationFileName]
+	if raw == "" {
+		return nil, nil
+	}
 	var odigosConfig common.OdigosConfiguration
-	if err := yaml.Unmarshal([]byte(cm.Data[consts.OdigosConfigurationFileName]), &odigosConfig); err != nil {
+	if err := yaml.Unmarshal([]byte(raw), &odigosConfig); err != nil {
 		return nil, fmt.Errorf("failed to parse odigos config: %w", err)
 	}
-
 	return &odigosConfig, nil
 }
 
@@ -115,6 +122,21 @@ func upsertLocalUiConfig(ctx context.Context, c client.Client, mutate func(cfg *
 
 func PersistUiLocalSamplingConfig(ctx context.Context, c client.Client, samplingConfig *common.SamplingConfiguration) error {
 	return upsertLocalUiConfig(ctx, c, func(cfg *common.OdigosConfiguration) {
-		cfg.Sampling = samplingConfig
+		if cfg.Sampling == nil {
+			cfg.Sampling = samplingConfig
+			return
+		}
+		if samplingConfig.DryRun != nil {
+			cfg.Sampling.DryRun = samplingConfig.DryRun
+		}
+		if samplingConfig.SpanSamplingAttributes != nil {
+			cfg.Sampling.SpanSamplingAttributes = samplingConfig.SpanSamplingAttributes
+		}
+		if samplingConfig.TailSampling != nil {
+			cfg.Sampling.TailSampling = samplingConfig.TailSampling
+		}
+		if samplingConfig.K8sHealthProbesSampling != nil {
+			cfg.Sampling.K8sHealthProbesSampling = samplingConfig.K8sHealthProbesSampling
+		}
 	})
 }

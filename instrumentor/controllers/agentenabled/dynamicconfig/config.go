@@ -9,6 +9,7 @@ import (
 	commonapi "github.com/odigos-io/odigos/common/api"
 	commonapisampling "github.com/odigos-io/odigos/common/api/sampling"
 	"github.com/odigos-io/odigos/distros/distro"
+	"github.com/odigos-io/odigos/instrumentor/controllers/agentenabled/dynamicconfig/logs"
 	"github.com/odigos-io/odigos/instrumentor/controllers/agentenabled/dynamicconfig/metrics"
 	"github.com/odigos-io/odigos/instrumentor/controllers/agentenabled/dynamicconfig/traces"
 	"github.com/odigos-io/odigos/instrumentor/controllers/agentenabled/signals"
@@ -74,8 +75,13 @@ func calculateTracesConfig(
 				dryRun = *effectiveConfig.Sampling.DryRun
 			}
 
-			spanMetricsEnabled := nodeCollectorsGroup.Spec.Metrics.SpanMetrics == nil || nodeCollectorsGroup.Spec.Metrics.SpanMetrics.Disabled == nil || !*nodeCollectorsGroup.Spec.Metrics.SpanMetrics.Disabled
-			metricsSignalEnabled := slices.Contains(nodeCollectorsGroup.Status.ReceiverSignals, common.MetricsObservabilitySignal)
+			spanMetricsEnabled := nodeCollectorsGroup != nil &&
+				nodeCollectorsGroup.Spec.Metrics != nil &&
+				(nodeCollectorsGroup.Spec.Metrics.SpanMetrics == nil ||
+					nodeCollectorsGroup.Spec.Metrics.SpanMetrics.Disabled == nil ||
+					!*nodeCollectorsGroup.Spec.Metrics.SpanMetrics.Disabled)
+			metricsSignalEnabled := nodeCollectorsGroup != nil &&
+				slices.Contains(nodeCollectorsGroup.Status.ReceiverSignals, common.MetricsObservabilitySignal)
 			configuredMode := effectiveConfig.MetricsSources != nil &&
 				effectiveConfig.MetricsSources.SpanMetrics != nil &&
 				effectiveConfig.MetricsSources.SpanMetrics.SpanMetricsMode != nil
@@ -122,6 +128,12 @@ func calculateTracesConfig(
 	// Code Attributes - Agent only (not applicable to collector)
 	agentConfig.CodeAttributes = traces.CalculateCodeAttributesConfig(d, irls)
 
+	// Trace Verbosity - Agent only (not applicable to collector)
+	agentConfig.TraceVerbosity = traces.CalculateTraceVerbosityConfig(d, irls)
+
+	// Custom Instrumentations - Agent only (not applicable to collector)
+	agentConfig.CustomInstrumentations = traces.CalculateCustomInstrumentationsConfig(d, irls)
+
 	return agentConfig, collectorConfig, nil
 }
 
@@ -167,6 +179,7 @@ func CalculateDynamicContainerConfig(
 	d *distro.OtelDistro,
 	enabledSignals signals.EnabledSignals,
 	nodeCollectorsGroup *odigosv1.CollectorsGroup,
+	clusterCollectorsGroup *odigosv1.CollectorsGroup,
 ) (*DynamicContainerConfigs, *odigosv1.AgentDisabledInfo) {
 
 	var collectorConfig *commonapi.ContainerCollectorConfig
@@ -190,9 +203,15 @@ func CalculateDynamicContainerConfig(
 		metricsConfig = agentMetricsConfig
 	}
 
+	// To determine if logs are enabled, we check the gateway collector group receiver signals
+	// because logs won't be present in the data collection (node) collector group.
+	logsEnabled := clusterCollectorsGroup != nil && slices.Contains(clusterCollectorsGroup.Status.ReceiverSignals, common.LogsObservabilitySignal)
 	var logsConfig *odigosv1.AgentLogsConfig
-	if enabledSignals.LogsEnabled {
+	ebpfLogCaptureConfig := logs.CalculateEbpfLogCaptureConfig(d, irls)
+
+	if logsEnabled && ebpfLogCaptureConfig != nil {
 		logsConfig = &odigosv1.AgentLogsConfig{}
+		logsConfig.EbpfLogCapture = ebpfLogCaptureConfig
 	}
 
 	return &DynamicContainerConfigs{
