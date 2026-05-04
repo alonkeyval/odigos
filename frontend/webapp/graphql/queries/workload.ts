@@ -3,6 +3,12 @@ import { gql } from '@apollo/client';
 export const GET_SOURCE_TREE = gql`
   query GetSourceTree($filter: WorkloadFilter) {
     workloads(filter: $filter) {
+      runtimeInfo {
+        containers {
+          containerName
+          otherAgentName
+        }
+      }
       telemetryMetrics {
         totalDataSentBytes
         throughputBytes
@@ -16,13 +22,59 @@ export const GET_SOURCE_TREE = gql`
       }
       containers {
         containerName
+        agentEnabled {
+          agentEnabled
+          agentEnabledStatus {
+            status
+            message
+            reasonEnum
+          }
+          otelDistroName
+        }
+        agentConfig {
+          traces {
+            headSampling {
+              fallbackPercentage
+              checks {
+                percentage
+                conditions {
+                  key
+                  operator
+                  value
+                }
+              }
+            }
+          }
+        }
         instrumentations {
           name
           isStandardLibrary
         }
       }
+      rollout {
+        rolloutStatus {
+          name
+          status
+          reasonEnum
+          message
+        }
+      }
+      podsHealthStatus {
+        name
+        status
+        reasonEnum
+        message
+      }
+      processesHealthStatus {
+        name
+        status
+        reasonEnum
+        message
+      }
       pods {
         podName
+        nodeName
+        startTime
         agentInjected
         agentInjectedStatus {
           status
@@ -34,6 +86,11 @@ export const GET_SOURCE_TREE = gql`
         }
         containers {
           containerName
+          otelDistroName
+          restartCount
+          runningStartedTime
+          waitingReasonEnum
+          waitingMessage
           started
           ready
           isCrashLoop
@@ -117,7 +174,9 @@ export const GET_WORKLOADS_BY_IDS = gql`
         agentEnabled {
           agentEnabled
           agentEnabledStatus {
+            status
             message
+            reasonEnum
           }
           otelDistroName
         }
