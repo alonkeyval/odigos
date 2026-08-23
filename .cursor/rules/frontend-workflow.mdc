@@ -1,0 +1,27 @@
+---
+description: Frontend implementation without a dedicated designer — reuse existing Odigos UI, do not block on Figma
+alwaysApply: true
+---
+
+# Odigos frontend workflow
+
+The frontend team is two developers. Alon owns technical direction and UX decisions. There is no dedicated designer and no Figma requirement before implementation.
+
+Apply this only to frontend/UI work (`frontend/webapp` and related UI code).
+
+## How to implement
+
+- Do not treat Figma as a hard dependency. Start from the product requirement plus existing screens, shared components, and similar flows.
+- Search the repo for an existing implementation before proposing a new pattern, layout, or interaction.
+- Prefer `@odigos/ui-kit` and already-shipped Odigos screens over new visual conventions.
+- Consistency with the current product matters more than novelty. Do not invent design debt to move faster.
+- A first implementation can start from a clear product/UX spec. Visual polish comes after review and iteration.
+
+## When something is ambiguous
+
+- If the decision can be derived from an existing Odigos screen or component, follow that.
+- If it cannot, surface the UX decision explicitly and treat Alon as the design owner. Do not silently invent a new pattern.
+
+## Encoding design knowledge
+
+When a UI pattern is reused or decided, prefer capturing it in shared components, examples, or a Cursor rule over leaving it as tribal knowledge.
