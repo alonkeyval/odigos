@@ -306,7 +306,6 @@
                       "oss/backends/kafka",
                       "oss/backends/kloudmate",
                       "oss/backends/last9",
-                      "oss/backends/lightstep",
                       "oss/backends/logzio",
                       "oss/backends/loki",
                       "oss/backends/lumigo",

@@ -41,7 +41,6 @@ const (
 	KafkaDestinationType                  DestinationType = "kafka"
 	KloudMateDestinationType              DestinationType = "kloudmate"
 	Last9DestinationType                  DestinationType = "last9"
-	LightstepDestinationType              DestinationType = "lightstep"
 	LogzioDestinationType                 DestinationType = "logzio"
 	LokiDestinationType                   DestinationType = "loki"
 	LumigoDestinationType                 DestinationType = "lumigo"
