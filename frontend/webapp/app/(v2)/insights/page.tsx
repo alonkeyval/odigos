@@ -4,11 +4,11 @@ import React, { useEffect } from 'react';
 import { ROUTES } from '@/utils';
 import { useConfig } from '@/hooks';
 import { useRouter } from 'next/navigation';
-import { Insights } from '@odigos/ui-kit/containers';
+import { InsightsV2 } from '@odigos/ui-kit/containers';
 import { CenterThis, Loader } from '@odigos/ui-kit/components';
 
-// The nav entry is already hidden when insights are disabled, so this guard
-// only catches direct navigation to `/insights`.
+// The rebuilt Insights (PLAT-1678) replaces the legacy page. The nav entry is already hidden when insights are
+// disabled, so this guard only catches direct navigation to `/insights`.
 export default function Page() {
   const router = useRouter();
   const { config } = useConfig();
@@ -25,5 +25,5 @@ export default function Page() {
     );
   }
 
-  return <Insights />;
+  return <InsightsV2 />;
 }
