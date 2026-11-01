@@ -67,13 +67,15 @@ const setTimeInput = (fieldPath: string, value: string) => {
     .scrollIntoView()
     .click({ force: true });
   // Portal-rendered option may land outside the viewport; force-click skips actionability checks.
-  cy.get(`[data-id="option-${unitId}"]`).click({ force: true });
+  // The previous dropdown's list can still be closing, and the open one is the last in the DOM.
+  cy.get(`[data-id="option-${unitId}"]`).last().click({ force: true });
 };
 
 const selectDropdownOption = (fieldPath: string, optionLabel: string) => {
   cy.get(DATA_IDS.SETTINGS_FIELD(fieldPath)).scrollIntoView().click({ force: true });
   // Portal-rendered option may land outside the viewport; force-click skips actionability checks.
-  cy.get(`[data-id="option-${optionLabel}"]`).click({ force: true });
+  // The previous dropdown's list can still be closing, and the open one is the last in the DOM.
+  cy.get(`[data-id="option-${optionLabel}"]`).last().click({ force: true });
 };
 
 const addMultiInputValue = (fieldPath: string, value: string) => {
@@ -243,7 +245,8 @@ describe('Settings CRUD', () => {
 
         // Don't use cy.wait('@gql') or waitForGraphqlOperation here — background
         // SSE-triggered queries can consume the alias before the mutation response arrives.
-        // awaitToast({ message: TEXTS.NOTIF_CONFIG_UPDATED });
+        // The toast holds the test until it did: ending it now would cancel the request with the page.
+        awaitToast({ message: TEXTS.NOTIF_CONFIG_UPDATED });
       });
     });
   });

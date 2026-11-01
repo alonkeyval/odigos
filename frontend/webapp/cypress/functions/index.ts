@@ -236,7 +236,7 @@ interface UpdateV2EntityOptions {
   nodeContains?: string;
 
   // Drawer convention prefix. Together with the `{prefix}-btn-{edit,delete,save,cancel}` naming,
-  // this identifies the dropdown options and footer buttons rendered by a v2 edit drawer.
+  // this identifies the header and footer buttons rendered by a v2 edit drawer.
   // E.g. `'edit-rule'`, `'edit-action'`, `'edit-source'`, `'edit-destination'`.
   prefix: string;
 
@@ -247,14 +247,13 @@ interface UpdateV2EntityOptions {
 
 // v2 edit-drawer flow:
 // 1. open the entity's drawer by clicking its data-flow row
-// 2. open the drawer header's actions dropdown and click "Edit"
+// 2. click "Edit" in the drawer's header
 // 3. update the named field and click "Save"
 // 4. close the drawer (it does not auto-close after save) and wait for Overlay unmount
 export const updateV2Entity = ({ nodeId, nodeContains, prefix, fieldKey, fieldValue }: UpdateV2EntityOptions, callback?: () => void) => {
   openOverviewEntity({ nodeId, nodeContains });
 
-  cy.get(DATA_IDS.DRAWER_ACTIONS).click();
-  cy.get(DATA_IDS.DROPDOWN_OPTION(`${prefix}-btn-edit`)).click();
+  cy.get(`[data-id=${prefix}-btn-edit]`).click();
 
   cy.get(fieldKey).click().focused().clear().type(fieldValue);
   cy.get(fieldKey).should('have.value', fieldValue);
@@ -263,6 +262,8 @@ export const updateV2Entity = ({ nodeId, nodeContains, prefix, fieldKey, fieldVa
 
   if (!!callback) callback();
 
+  // Saved once it's out of edit mode: closing before that asks to discard the changes.
+  cy.get(`[data-id=${prefix}-btn-save]`).should('not.exist');
   cy.get(DATA_IDS.DRAWER_CLOSE).click();
   waitForDrawerClosed();
 };
@@ -275,12 +276,11 @@ interface DeleteV2EntityOptions {
   warnModalNote?: string;
 }
 
-// v2 edit-drawer flow: open drawer → actions dropdown → "Delete" → confirm modal.
+// v2 edit-drawer flow: open drawer → "Delete" in its header → confirm modal.
 export const deleteV2Entity = ({ nodeId, nodeContains, prefix, warnModalTitle, warnModalNote }: DeleteV2EntityOptions, callback?: () => void) => {
   openOverviewEntity({ nodeId, nodeContains });
 
-  cy.get(DATA_IDS.DRAWER_ACTIONS).click();
-  cy.get(DATA_IDS.DROPDOWN_OPTION(`${prefix}-btn-delete`)).click();
+  cy.get(`[data-id=${prefix}-btn-delete]`).click();
 
   if (!!warnModalTitle) cy.get(DATA_IDS.MODAL).contains(warnModalTitle).should('exist');
   if (!!warnModalNote) cy.get(DATA_IDS.MODAL).contains(warnModalNote).should('exist');
