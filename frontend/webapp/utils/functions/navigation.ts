@@ -14,7 +14,7 @@ const getPayloadForIcon = (router: AppRouterInstance, currentPath: string, targe
   };
 };
 
-export const getNavbarIcons = (router: AppRouterInstance, currentPath: string, insightsEnabled?: boolean) => {
+export const getNavbarIcons = (router: AppRouterInstance, currentPath: string) => {
   const navIcons: NavbarProps['icons'] = [];
   const add = (path: string, label: string, icon: SVG, place: { group?: string; bottom?: boolean } = {}) => navIcons.push({ ...getPayloadForIcon(router, currentPath, path, label, icon), ...place });
 
@@ -22,9 +22,8 @@ export const getNavbarIcons = (router: AppRouterInstance, currentPath: string, i
   add(ROUTES.OVERVIEW, 'Overview', OverviewIcon);
 
   add(ROUTES.SERVICE_MAP, 'Service Map', ServiceMapIcon, { group: 'Observe' });
-  // The odigos-insights service is only deployed when insights are enabled in the
-  // effective config, so the entry stays hidden until the feature is actually there.
-  if (insightsEnabled) add(ROUTES.INSIGHTS, 'Insights', InsightsIcon, { group: 'Observe' });
+  // Listed even when insights are off: the page says so and how to turn them on.
+  add(ROUTES.INSIGHTS, 'Insights', InsightsIcon, { group: 'Observe' });
   add(ROUTES.PROFILING, 'Profiling', ProfilingIcon, { group: 'Observe' });
 
   add(ROUTES.COLLECTORS, 'Collectors', PipelineCollectorIcon, { group: 'Pipeline' });
