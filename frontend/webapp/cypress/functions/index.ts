@@ -21,7 +21,8 @@ const graphqlOperationName = (raw: unknown): string | undefined => {
 
 // Resolves only when the named operation completes.
 // Plain cy.wait('@gql') races with other /graphql traffic (e.g. GetActions after a prior create), which can yield no toast.
-export const waitForGraphqlOperation = (operationName: string, maxSkips = 40): Cypress.Chainable => {
+// The redesigned pages send many background queries (tokens, recommendations, data streams), so the skip budget is large.
+export const waitForGraphqlOperation = (operationName: string, maxSkips = 200): Cypress.Chainable => {
   return cy.wait('@gql', { timeout: 120000 }).then((interception) => {
     const op = graphqlOperationName(interception.request.body);
     if (op === operationName) {
