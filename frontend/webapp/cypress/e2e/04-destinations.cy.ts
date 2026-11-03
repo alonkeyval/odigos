@@ -12,8 +12,11 @@ const destinationIds: string[] = [];
 
 describe('Destinations CRUD', () => {
   beforeEach(() => {
-    // The redesigned overview sends many queries, so wait for this mutation by its own alias rather than skipping through '@gql'.
-    cy.intercept('/graphql', (req) => aliasMutation(req, 'UpdateDestination')).as('gql');
+    // The redesigned overview sends many queries, so wait for these mutations by their own alias rather than skipping through '@gql'.
+    cy.intercept('/graphql', (req) => {
+      aliasMutation(req, 'UpdateDestination');
+      aliasMutation(req, 'DeleteDestination');
+    }).as('gql');
     handleExceptions();
   });
 
@@ -95,7 +98,7 @@ describe('Destinations CRUD', () => {
         },
         () => {
           // Wait for the destination to delete
-          waitForGraphqlOperation('DeleteDestination').then(() => {
+          cy.wait('@gqlDeleteDestinationMutation', { timeout: 120000 }).then(() => {
             awaitToast({ message: TEXTS.NOTIF_DESTINATION_DELETED(SELECTED_ENTITIES.DESTINATION.TYPE) }, () => {
               getCrdIds({ namespace, crdName, expectedError: TEXTS.NO_RESOURCES(namespace), expectedLength: 0 });
             });
