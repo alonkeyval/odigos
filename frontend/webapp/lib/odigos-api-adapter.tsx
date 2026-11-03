@@ -16,6 +16,7 @@
  *   `export default function Page() { return <Overview metrics={…} />; }`
  */
 
+import type { DocumentNode } from '@apollo/client';
 import React, { type FC, type PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react';
 import { useConfig, useCSRF } from '@/hooks';
 import { CenterThis, Loader } from '@odigos/ui-kit/components';
@@ -180,6 +181,7 @@ import {
   CONFIGURE_PROFILING_CACHE,
   PERSIST_NAMESPACES,
   PERSIST_SOURCES,
+  PERSIST_SOURCES_AND_NAMESPACES,
   RECOVER_FROM_ROLLBACK,
   RESET_LOCAL_UI_CONFIG_TO_FACTORY_DEFAULTS,
   RESTART_POD,
@@ -263,7 +265,8 @@ const sanitizeDestinationsResult = (raw: GetDestinationsData | null | undefined)
 
 // Stable operations map — referentially constant so the kit's runner doesn't
 // rebuild memoized callbacks on every render.
-const operations: OdigosApiOperations = {
+// PERSIST_SOURCES_AND_NAMESPACES is not in the pinned @odigos/ui-kit types yet; drop the intersection once the kit is bumped.
+const operations: OdigosApiOperations & { PERSIST_SOURCES_AND_NAMESPACES: { document: DocumentNode } } = {
   // sources / workloads
   GET_WORKLOADS: { document: GET_WORKLOADS },
   GET_WORKLOADS_BY_IDS: { document: GET_WORKLOADS_BY_IDS },
@@ -276,6 +279,7 @@ const operations: OdigosApiOperations = {
     transformVariables: (vars) => ({ filter: vars }),
   },
   PERSIST_SOURCES: { document: PERSIST_SOURCES },
+  PERSIST_SOURCES_AND_NAMESPACES: { document: PERSIST_SOURCES_AND_NAMESPACES },
   UPDATE_SOURCE: { document: UPDATE_K8S_ACTUAL_SOURCE },
   RESTART_WORKLOADS: { document: RESTART_WORKLOADS },
   RESTART_POD: { document: RESTART_POD },
