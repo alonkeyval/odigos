@@ -251,7 +251,7 @@ jobs:
 
   build-frontend:
     name: build-frontend
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-24.04-8
     steps:
       - uses: actions/checkout@v5
       # webapp is scanned separately because it runs with yarn, while the rest of the frontend runs with golang.
