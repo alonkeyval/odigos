@@ -320,7 +320,6 @@ jobs:
           tags: |
             us-central1-docker.pkg.dev/odigos-cloud/components/odigos-${{ matrix.service }}:${{ env.ODIGOS_TAG }}
             us-central1-docker.pkg.dev/odigos-cloud/components-private/odigos-${{ matrix.service }}:${{ env.ODIGOS_TAG }}
-            keyval/odigos-${{ matrix.service }}:${{ env.ODIGOS_TAG }}
             ghcr.io/odigos-io/odigos-${{ matrix.service }}:${{ env.ODIGOS_TAG }}
           build-args: |
             SERVICE_NAME=${{ matrix.service }}
@@ -342,7 +341,7 @@ jobs:
             ${{ matrix.service == 'agents' && 'agents' || '' }}
 
       # Runs in this job so it inherits the registry logins above. One build
-      # writes the same digest to four registries; each ref gets its own
+      # writes the same digest to three registries; each ref gets its own
       # signature, because signatures live beside the image in one registry
       # and do not travel with a copy. Signing is fail-closed: a signing
       # failure fails this publish job.
@@ -352,7 +351,6 @@ jobs:
           refs: |
             us-central1-docker.pkg.dev/odigos-cloud/components/odigos-${{ matrix.service }}
             us-central1-docker.pkg.dev/odigos-cloud/components-private/odigos-${{ matrix.service }}
-            keyval/odigos-${{ matrix.service }}
             ghcr.io/odigos-io/odigos-${{ matrix.service }}
           digest: ${{ steps.build.outputs.digest }}
 

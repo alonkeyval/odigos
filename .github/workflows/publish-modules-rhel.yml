@@ -125,7 +125,6 @@ jobs:
               provenance: false
               tags: |
                 us-central1-docker.pkg.dev/odigos-cloud/components/odigos-${{ matrix.service }}-rhel-certified:${{ env.ODIGOS_TAG }}
-                keyval/odigos-${{ matrix.service }}-rhel-certified:${{ env.ODIGOS_TAG }}
                 ghcr.io/odigos-io/odigos-${{ matrix.service }}-rhel-certified:${{ env.ODIGOS_TAG }}
                 quay.io/odigos/odigos-${{ matrix.service }}-rhel-certified:${{ env.ODIGOS_TAG }}
               build-args: |
@@ -224,7 +223,6 @@ jobs:
               provenance: false
               tags: |
                 us-central1-docker.pkg.dev/odigos-cloud/components/odigos-cli-rhel-ko-base:${{ inputs.tag }}
-                keyval/odigos-cli-rhel-ko-base:${{ inputs.tag }}
                 ghcr.io/odigos-io/odigos-cli-rhel-ko-base:${{ inputs.tag }}
 
           - uses: ko-build/setup-ko@v0.9
@@ -264,14 +262,14 @@ jobs:
             uses: imjasonh/setup-crane@v0.4
 
           # ko only supports a single KO_DOCKER_REPO, so mirror the published
-          # multi-arch index to Docker Hub, GHCR, and Quay with `crane copy` to
+          # multi-arch index to GHCR and Quay with `crane copy` to
           # match the destinations used for the other RHEL-certified images.
-          - name: Mirror CLI image to Docker Hub, GHCR, and Quay
+          - name: Mirror CLI image to GHCR and Quay
             env:
               SOURCE: ${{ steps.ko-publish.outputs.image }}
               TAG: ${{ inputs.tag }}
             run: |
-              for DEST in keyval/odigos-cli-rhel-certified ghcr.io/odigos-io/odigos-cli-rhel-certified quay.io/odigos/odigos-cli-rhel-certified; do
+              for DEST in ghcr.io/odigos-io/odigos-cli-rhel-certified quay.io/odigos/odigos-cli-rhel-certified; do
                 for T in "${TAG}" latest; do
                   echo "Copying ${SOURCE} -> ${DEST}:${T}"
                   crane copy "${SOURCE}" "${DEST}:${T}"
